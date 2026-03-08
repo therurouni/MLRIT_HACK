@@ -160,10 +160,34 @@ async def scan_directory(root: Path | None = None) -> list[int]:
 class SEFSEventHandler(FileSystemEventHandler):
     """Watchdog event handler that bridges sync callbacks to async processing."""
 
+    def __init__(self):
+        super().__init__()
+        self._pending: dict[str, asyncio.Handle] = {}
+
     def _run_async(self, coro):
         """Schedule an async coroutine from the sync watchdog thread."""
         if _loop and _loop.is_running():
             asyncio.run_coroutine_threadsafe(coro, _loop)
+
+    def _debounced_process(self, path: Path, coro_factory, delay: float = 1.0):
+        """Schedule file processing with debounce to coalesce duplicate events."""
+        key = str(path)
+        if _loop and _loop.is_running():
+            # Cancel any previously scheduled task for this path
+            existing = self._pending.pop(key, None)
+            if existing:
+                existing.cancel()
+
+            def _schedule():
+                handle = _loop.call_later(delay, self._fire, key, coro_factory)
+                self._pending[key] = handle
+
+            _loop.call_soon_threadsafe(_schedule)
+
+    def _fire(self, key: str, coro_factory):
+        """Actually run the coroutine after debounce delay."""
+        self._pending.pop(key, None)
+        asyncio.ensure_future(coro_factory())
 
     def on_created(self, event):
         if event.is_directory:
@@ -171,7 +195,7 @@ class SEFSEventHandler(FileSystemEventHandler):
         path = Path(event.src_path)
         if not should_ignore(path):
             logger.info(f"File created: {path}")
-            self._run_async(process_file(path))
+            self._debounced_process(path, lambda: process_file(path))
 
     def on_modified(self, event):
         if event.is_directory:
@@ -179,7 +203,7 @@ class SEFSEventHandler(FileSystemEventHandler):
         path = Path(event.src_path)
         if not should_ignore(path):
             logger.debug(f"File modified: {path}")
-            self._run_async(process_file(path))
+            self._debounced_process(path, lambda: process_file(path))
 
     def on_deleted(self, event):
         if event.is_directory:

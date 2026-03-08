@@ -7,6 +7,7 @@ import csv
 import io
 import logging
 import shutil
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -44,25 +45,33 @@ def _check_tesseract() -> bool:
 
 def read_text_file(path: Path) -> Optional[str]:
     """Read a plain text file with encoding detection."""
-    try:
-        size = path.stat().st_size
-        if size == 0:
-            return ""
-        if size > MAX_FILE_SIZE_BYTES:
-            logger.info(f"Skipping {path} - too large ({size} bytes)")
-            return None
-
-        raw = path.read_bytes()
-        detected = chardet.detect(raw)
-        encoding = detected.get("encoding", "utf-8") or "utf-8"
-
+    max_retries = 3
+    for attempt in range(max_retries):
         try:
-            return raw.decode(encoding, errors="replace")
-        except (UnicodeDecodeError, LookupError):
-            return raw.decode("utf-8", errors="replace")
-    except Exception as e:
-        logger.error(f"Error reading text file {path}: {e}")
-        return None
+            size = path.stat().st_size
+            if size == 0:
+                return ""
+            if size > MAX_FILE_SIZE_BYTES:
+                logger.info(f"Skipping {path} - too large ({size} bytes)")
+                return None
+
+            raw = path.read_bytes()
+            detected = chardet.detect(raw)
+            encoding = detected.get("encoding", "utf-8") or "utf-8"
+
+            try:
+                return raw.decode(encoding, errors="replace")
+            except (UnicodeDecodeError, LookupError):
+                return raw.decode("utf-8", errors="replace")
+        except PermissionError:
+            if attempt < max_retries - 1:
+                time.sleep(0.5)
+                continue
+            logger.error(f"Permission denied reading {path} after {max_retries} attempts")
+            return None
+        except Exception as e:
+            logger.error(f"Error reading text file {path}: {e}")
+            return None
 
 
 def read_pdf(path: Path) -> Optional[str]:
