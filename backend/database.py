@@ -158,6 +158,20 @@ async def get_all_files() -> list[dict]:
         await db.close()
 
 
+async def get_timeline_files() -> list[dict]:
+    """Get lightweight file records for timeline visualization, ordered by created_at."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT id, filename, extension, cluster_id, cluster_name, created_at, updated_at "
+            "FROM files ORDER BY created_at ASC"
+        )
+        rows = await cursor.fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        await db.close()
+
+
 async def get_file_by_id(file_id: int) -> Optional[dict]:
     """Get a single file by ID."""
     db = await get_db()

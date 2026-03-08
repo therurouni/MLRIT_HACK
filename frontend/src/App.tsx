@@ -22,6 +22,7 @@ import FileDetailsPanel, { type ClusterSelection } from "./components/FileDetail
 import SettingsDrawer from "./components/SettingsDrawer";
 import GapAnalysisPanel from "./components/GapAnalysisPanel";
 import HandTracker from "./components/HandTracker";
+import TimelineView from "./components/TimelineView";
 
 const CLUSTER_COLORS = [
 	"#D97757",
@@ -60,8 +61,10 @@ export default function App() {
 	const pendingBasicThenSemantic = useRef(false);
 	const graphKeyRef = useRef(0);
 	const umapKeyRef = useRef(0);
+	const timelineKeyRef = useRef(0);
 	const [graphKey, setGraphKey] = useState(0);
 	const [umapKey, setUmapKey] = useState(0);
+	const [timelineKey, setTimelineKey] = useState(0);
 	const { connected, events, lastEvent } = useWebSocket();
 
 	// File details panel state
@@ -177,16 +180,20 @@ export default function App() {
 				setProcessingStatus("");
 				graphKeyRef.current += 1;
 				umapKeyRef.current += 1;
+				timelineKeyRef.current += 1;
 				setGraphKey(graphKeyRef.current);
 				setUmapKey(umapKeyRef.current);
+				setTimelineKey(timelineKeyRef.current);
 			}
 		} else if (t === "files_organized" || t === "organizing_complete") {
 			setProcessing(false);
 			setProcessingStatus("");
 			graphKeyRef.current += 1;
 			umapKeyRef.current += 1;
+			timelineKeyRef.current += 1;
 			setGraphKey(graphKeyRef.current);
 			setUmapKey(umapKeyRef.current);
+			setTimelineKey(timelineKeyRef.current);
 		} else if (t === "scan_error" || t === "clustering_error") {
 			setProcessing(false);
 			setProcessingStatus("");
@@ -286,6 +293,12 @@ export default function App() {
 							key={umapKey}
 							onNodeClick={(fileId, clusterId) => handleNodeClick(fileId, clusterId)}
 							searchQuery={searchQuery}
+						/>
+					)}
+					{activeTab === "timeline" && (
+						<TimelineView
+							key={timelineKey}
+							onNodeClick={handleNodeClick}
 						/>
 					)}
 					{activeTab === "files" && (

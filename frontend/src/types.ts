@@ -58,6 +58,26 @@ export interface UmapPoint {
 	cluster_name?: string;
 }
 
+export interface TimelineEntry {
+	kind: "file_added" | "file_updated" | "cluster_created" | "event";
+	timestamp: number;
+	// file entries
+	file_id?: number;
+	filename?: string;
+	extension?: string;
+	cluster_id?: number;
+	cluster_name?: string;
+	// cluster entries
+	file_count?: number;
+	// system event entries
+	event_type?: string;
+	data?: Record<string, unknown>;
+}
+
+export interface TimelineData {
+	entries: TimelineEntry[];
+}
+
 export interface SearchResult {
 	file_id: number;
 	filename: string;
@@ -89,7 +109,7 @@ export interface EventRecord {
 	created_at: number;
 }
 
-export type ViewTab = "files" | "graph" | "umap" | "search" | "chat" | "gaps";
+export type ViewTab = "files" | "graph" | "umap" | "timeline" | "search" | "chat" | "gaps";
 
 export interface GapTopic {
 	topic: string;

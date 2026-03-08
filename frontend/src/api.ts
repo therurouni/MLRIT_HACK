@@ -92,6 +92,10 @@ export async function getUmapData() {
 	return fetchJSON<{ points: any[] }>("/api/clusters/umap");
 }
 
+export async function getTimelineData(limit: number = 500) {
+	return fetchJSON<import('./types').TimelineData>(`/api/clusters/timeline?limit=${limit}`);
+}
+
 export async function organizeFiles() {
 	return fetchJSON<{ status: string }>("/api/clusters/organize", {
 		method: "POST",

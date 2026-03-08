@@ -155,6 +155,65 @@ async def get_umap():
     return {"points": enriched}
 
 
+@router.get("/timeline")
+async def get_timeline(limit: int = 500):
+    """
+    Get a unified chronological log of all activity:
+    file creations/updates, system events, and cluster creations.
+    """
+    entries: list[dict] = []
+
+    # 1. File events — each file tracked = a "file_added" entry
+    files = await db.get_timeline_files()
+    for f in files:
+        entries.append({
+            "kind": "file_added",
+            "timestamp": f["created_at"],
+            "file_id": f["id"],
+            "filename": f["filename"],
+            "extension": f.get("extension", ""),
+            "cluster_id": f.get("cluster_id") if f.get("cluster_id") is not None else -1,
+            "cluster_name": f.get("cluster_name") or "Unclustered",
+        })
+        # If updated_at differs meaningfully from created_at, add update entry
+        if f["updated_at"] and f["created_at"] and (f["updated_at"] - f["created_at"]) > 2:
+            entries.append({
+                "kind": "file_updated",
+                "timestamp": f["updated_at"],
+                "file_id": f["id"],
+                "filename": f["filename"],
+                "extension": f.get("extension", ""),
+                "cluster_id": f.get("cluster_id") if f.get("cluster_id") is not None else -1,
+                "cluster_name": f.get("cluster_name") or "Unclustered",
+            })
+
+    # 2. Cluster creations
+    clusters = await db.get_all_clusters()
+    for c in clusters:
+        entries.append({
+            "kind": "cluster_created",
+            "timestamp": c["created_at"],
+            "cluster_id": c["label"],
+            "cluster_name": c.get("name") or f"Cluster {c['label']}",
+            "file_count": c.get("file_count", 0),
+        })
+
+    # 3. System events (scan, clustering, naming, organizing, etc.)
+    events = await db.get_recent_events(limit=200)
+    for ev in events:
+        entries.append({
+            "kind": "event",
+            "timestamp": ev["created_at"],
+            "event_type": ev["event_type"],
+            "data": ev.get("data") or {},
+        })
+
+    # Sort all entries chronologically (newest first)
+    entries.sort(key=lambda e: e["timestamp"], reverse=True)
+
+    return {"entries": entries[:limit]}
+
+
 @router.post("/organize")
 async def organize(background_tasks: BackgroundTasks):
     """Physically organize files into cluster folders (uses last clustering result)."""

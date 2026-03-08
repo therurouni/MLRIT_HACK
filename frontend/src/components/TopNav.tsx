@@ -45,6 +45,7 @@ export default function TopNav({
 					[
 						{ id: "graph" as ViewTab, label: "Graph", icon: "◎" },
 						{ id: "umap" as ViewTab, label: "Spatial", icon: "◫" },
+						{ id: "timeline" as ViewTab, label: "Timeline", icon: "⏤" },
 					] as const
 				).map((tab) => (
 					<button
