@@ -35,8 +35,21 @@ export async function setRoot(root: string) {
 	});
 }
 
-export async function scanFiles(root?: string) {
+export async function scanFiles(
+	root?: string,
+	semanticOrganize: boolean = false,
+) {
 	return fetchJSON<{ status: string; root: string }>("/api/files/scan", {
+		method: "POST",
+		body: JSON.stringify({
+			root: root || null,
+			semantic_organize: semanticOrganize,
+		}),
+	});
+}
+
+export async function basicOrganize(root?: string) {
+	return fetchJSON<{ status: string }>("/api/files/basic-organize", {
 		method: "POST",
 		body: JSON.stringify({ root: root || null }),
 	});
@@ -57,10 +70,13 @@ export async function getClusters() {
 	return fetchJSON<{ clusters: any[]; total: number }>("/api/clusters");
 }
 
-export async function recluster(organize: boolean = false) {
+export async function recluster(
+	organize: boolean = false,
+	semanticOrganize: boolean = false,
+) {
 	return fetchJSON<{ status: string }>("/api/clusters/recluster", {
 		method: "POST",
-		body: JSON.stringify({ organize }),
+		body: JSON.stringify({ organize, semantic_organize: semanticOrganize }),
 	});
 }
 

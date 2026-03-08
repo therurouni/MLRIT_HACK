@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { ViewTab, FileRecord, WSEvent } from "./types";
-import { getFiles, getHealth, scanFiles, recluster } from "./api";
+import { getFiles, getHealth, scanFiles, recluster, basicOrganize } from "./api";
 import { useWebSocket } from "./hooks/useWebSocket";
 import Sidebar from "./components/Sidebar";
 import FileList from "./components/FileList";
@@ -19,6 +19,8 @@ export default function App() {
 	const [processing, setProcessing] = useState(false);
 	const [processingStatus, setProcessingStatus] = useState("");
 	const pendingOrganize = useRef(false);
+	const pendingSemanticOrganize = useRef(false);
+	const pendingBasicThenSemantic = useRef(false);
 	const graphKeyRef = useRef(0);
 	const umapKeyRef = useRef(0);
 	const [graphKey, setGraphKey] = useState(0);
@@ -63,6 +65,8 @@ export default function App() {
 			"clustering_complete",
 			"naming_complete",
 			"files_organized",
+			"basic_organize_complete",
+			"organizing_complete",
 		];
 		if (refreshEvents.includes(t)) {
 			loadFiles();
@@ -72,9 +76,27 @@ export default function App() {
 		if (!processing) return;
 
 		// Pipeline state machine
-		if (t === "scan_complete") {
+		if (t === "basic_organize_complete") {
+			if (pendingBasicThenSemantic.current) {
+				// Both modes: basic done, now start the semantic pipeline
+				pendingBasicThenSemantic.current = false;
+				setProcessingStatus("Scanning files...");
+				scanFiles(root, true).catch((e) => {
+					setProcessing(false);
+					setProcessingStatus("");
+					alert("Scan failed: " + e.message);
+				});
+			} else {
+				// Basic organize only — we're done
+				setProcessing(false);
+				setProcessingStatus("");
+			}
+		} else if (t === "scan_complete") {
 			setProcessingStatus("Clustering files...");
-			recluster(pendingOrganize.current).catch((e) => {
+			recluster(
+				pendingOrganize.current,
+				pendingSemanticOrganize.current,
+			).catch((e) => {
 				setProcessing(false);
 				setProcessingStatus("");
 				alert("Clustering failed: " + e.message);
@@ -82,8 +104,12 @@ export default function App() {
 		} else if (t === "clustering_complete") {
 			setProcessingStatus("Naming clusters with LLM...");
 		} else if (t === "naming_complete") {
-			if (pendingOrganize.current) {
-				setProcessingStatus("Organizing files on disk...");
+			if (pendingOrganize.current || pendingSemanticOrganize.current) {
+				setProcessingStatus(
+					pendingSemanticOrganize.current
+						? "Organizing into semantic folder..."
+						: "Organizing files on disk...",
+				);
 			} else {
 				// Done! Refresh graphs
 				setProcessing(false);
@@ -104,18 +130,34 @@ export default function App() {
 			setProcessing(false);
 			setProcessingStatus("");
 		}
-	}, [lastEvent, processing, loadFiles, loadHealth]);
+	}, [lastEvent, processing, loadFiles, loadHealth, root]);
 
-	const handleScanAndCluster = async (organize: boolean) => {
-		pendingOrganize.current = organize;
+	const handleScanAndCluster = async (
+		doBasicOrganize: boolean,
+		semanticOrganize: boolean,
+	) => {
+		pendingOrganize.current = semanticOrganize;
+		pendingSemanticOrganize.current = semanticOrganize;
+		pendingBasicThenSemantic.current = doBasicOrganize && semanticOrganize;
 		setProcessing(true);
-		setProcessingStatus("Scanning files...");
+
 		try {
-			await scanFiles(root);
+			if (doBasicOrganize) {
+				// Start basic organize; WS event will trigger next step
+				setProcessingStatus("Organizing by file type...");
+				await basicOrganize(root);
+				// If both: WS "basic_organize_complete" will chain to scan
+				// If basic only: WS "basic_organize_complete" will finish
+				return;
+			}
+
+			// Semantic only (no basic organize)
+			setProcessingStatus("Scanning files...");
+			await scanFiles(root, semanticOrganize);
 		} catch (e: any) {
 			setProcessing(false);
 			setProcessingStatus("");
-			alert("Scan failed: " + e.message);
+			alert("Operation failed: " + e.message);
 		}
 	};
 

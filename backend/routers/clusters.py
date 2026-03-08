@@ -22,6 +22,7 @@ _latest_cluster_data: Optional[dict] = None
 
 class ReclusterRequest(BaseModel):
     organize: bool = False  # Whether to physically move files after clustering
+    semantic_organize: bool = False  # If true, organize into a -semantic replica folder
 
 
 @router.get("")
@@ -34,11 +35,14 @@ async def list_clusters():
 @router.post("/recluster")
 async def recluster(req: ReclusterRequest, background_tasks: BackgroundTasks):
     """Trigger re-clustering of all embedded files."""
-    background_tasks.add_task(_run_clustering, req.organize)
-    return {"status": "clustering_started", "organize": req.organize}
+    # Check scan flags if not explicitly set
+    from backend.routers.files import _scan_flags
+    semantic = req.semantic_organize or _scan_flags.get("semantic_organize", False)
+    background_tasks.add_task(_run_clustering, req.organize, semantic)
+    return {"status": "clustering_started", "organize": req.organize, "semantic_organize": semantic}
 
 
-async def _run_clustering(organize: bool = False):
+async def _run_clustering(organize: bool = False, semantic_organize: bool = False):
     """Background clustering task."""
     global _latest_cluster_data
     try:
@@ -61,9 +65,24 @@ async def _run_clustering(organize: bool = False):
         _latest_cluster_data = cluster_data
 
         # Step 3: Optionally organize files on disk
-        if organize:
-            await ws_manager.broadcast("organizing_started", {})
-            summary = await organize_files(cluster_data)
+        if organize or semantic_organize:
+            import backend.config as config
+
+            if semantic_organize:
+                # Create a replica folder: originalname-semantic
+                original_root = config.SEFS_ROOT
+                semantic_root = original_root.parent / f"{original_root.name}-semantic"
+                semantic_root.mkdir(parents=True, exist_ok=True)
+                target_root = semantic_root
+                logger.info(f"Semantic organize: replica folder at {semantic_root}")
+            else:
+                target_root = None  # Use original root
+
+            await ws_manager.broadcast("organizing_started", {
+                "semantic": semantic_organize,
+                "target_root": str(target_root) if target_root else None,
+            })
+            summary = await organize_files(cluster_data, target_root=target_root)
             await ws_manager.broadcast("organizing_complete", summary)
 
     except Exception as e:

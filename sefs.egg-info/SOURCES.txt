@@ -1,6 +1,7 @@
 README.md
 pyproject.toml
 backend/__init__.py
+backend/basic_organizer.py
 backend/cluster_namer.py
 backend/clustering.py
 backend/config.py

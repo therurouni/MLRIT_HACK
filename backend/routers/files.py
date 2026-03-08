@@ -20,6 +20,11 @@ router = APIRouter(prefix="/api/files", tags=["files"])
 
 class ScanRequest(BaseModel):
     root: Optional[str] = None
+    semantic_organize: bool = False
+
+
+class BasicOrganizeRequest(BaseModel):
+    root: Optional[str] = None
 
 
 class SetRootRequest(BaseModel):
@@ -73,26 +78,61 @@ async def set_root(req: SetRootRequest):
     return {"root": str(new_root), "status": "updated"}
 
 
+@router.post("/basic-organize")
+async def basic_organize_files(req: BasicOrganizeRequest, background_tasks: BackgroundTasks):
+    """Organize files by extension type (Images, Documents, Code, etc.) — no scan/cluster."""
+    root = Path(req.root) if req.root else config.SEFS_ROOT
+    if not root.exists():
+        raise HTTPException(status_code=404, detail=f"Directory not found: {root}")
+
+    background_tasks.add_task(_run_basic_organize, root)
+    return {"status": "basic_organize_started", "root": str(root)}
+
+
+async def _run_basic_organize(root: Path):
+    """Background basic-organize task."""
+    try:
+        from backend.basic_organizer import basic_organize as do_basic_organize
+        await do_basic_organize(root)
+    except Exception as e:
+        logger.error(f"Basic organize failed: {e}")
+        await ws_manager.broadcast("basic_organize_error", {"error": str(e)})
+
+
 @router.post("/scan")
 async def scan_files(req: ScanRequest, background_tasks: BackgroundTasks):
-    """Trigger a full directory scan."""
+    """Trigger a full directory scan (for semantic clustering pipeline)."""
     root = Path(req.root) if req.root else config.SEFS_ROOT
     if not root.exists():
         raise HTTPException(status_code=404, detail=f"Directory not found: {root}")
 
     # Run scan in background
-    background_tasks.add_task(_run_scan, root)
-    return {"status": "scan_started", "root": str(root)}
+    background_tasks.add_task(_run_scan, root, req.semantic_organize)
+    return {
+        "status": "scan_started",
+        "root": str(root),
+        "semantic_organize": req.semantic_organize,
+    }
 
 
-async def _run_scan(root: Path):
+async def _run_scan(
+    root: Path,
+    semantic_organize: bool = False,
+):
     """Background scan task."""
     try:
         file_ids = await scan_directory(root)
-        # Note: scan_directory() already broadcasts scan_complete — don't duplicate
+        # scan_directory() already broadcasts scan_complete
+
+        # Store the organize flag so the clustering pipeline can pick it up
+        _scan_flags["semantic_organize"] = semantic_organize
     except Exception as e:
         logger.error(f"Scan failed: {e}")
         await ws_manager.broadcast("scan_error", {"error": str(e)})
+
+
+# Shared state: flags from the latest scan for the clustering step
+_scan_flags: dict = {"semantic_organize": False}
 
 
 @router.get("/{file_id}")
@@ -117,3 +157,9 @@ async def file_stats():
         "clustered_files": len(clustered),
         "root": str(config.SEFS_ROOT),
     }
+
+
+@router.get("/scan-flags")
+async def get_scan_flags():
+    """Get the organize flags from the latest scan."""
+    return _scan_flags

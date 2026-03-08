@@ -13,37 +13,66 @@ from backend.websocket import ws_manager
 logger = logging.getLogger("sefs.file_organizer")
 
 
-async def organize_files(cluster_data: dict) -> dict:
+async def organize_files(cluster_data: dict, target_root: Path | None = None) -> dict:
     """
-    Move files into cluster-named subdirectories within SEFS_ROOT.
+    Move (or copy) files into cluster-named subdirectories, preserving
+    top-level folder structure.
 
-    Structure:
-        ~/sefs-root/
-            cluster-name-1/
-                file1.txt
-                file2.py
-            cluster-name-2/
-                file3.md
+    If target_root is None, files are moved within SEFS_ROOT.
+    If target_root is set (e.g. a -semantic replica folder), files are COPIED there.
+
+    Structure (preserving top-level subfolders):
+        root/
+            cluster-name-a/          ← root-level files
+                file_at_root.txt
+            ProjectA/
+                cluster-name-1/
+                    file1.txt
+                cluster-name-2/
+                    file2.py
+            ProjectB/
+                cluster-name-3/
+                    file3.md
             _unclustered/
                 noise_file.txt
 
     Returns summary of moves performed.
     """
+    use_copy = target_root is not None
+    root = target_root or config.SEFS_ROOT
+    source_root = config.SEFS_ROOT
     moves = []
     errors = []
+
+    # Build a lookup: figure out which top-level subfolder each file belongs to
+    # so we can place cluster folders inside the correct subfolder.
+    def _get_container(file_path: Path) -> Path:
+        """
+        Determine the container directory for a file.
+        - If the file is directly in source_root → container is root
+        - If the file is under source_root/SubFolder/... → container is root/SubFolder
+        """
+        try:
+            rel = file_path.relative_to(source_root)
+        except ValueError:
+            return root
+        parts = rel.parts
+        if len(parts) <= 1:
+            # File is directly in source_root
+            return root
+        else:
+            # File is under a top-level subfolder
+            return root / parts[0]
 
     for cluster in cluster_data.get("clusters", []):
         label = cluster["label"]
         name = cluster["name"]
 
-        # Determine target folder
+        # Determine folder name
         if label < 0:
             folder_name = "_unclustered"
         else:
             folder_name = name
-
-        target_dir = config.SEFS_ROOT / folder_name
-        target_dir.mkdir(parents=True, exist_ok=True)
 
         # Update cluster folder path in DB
         if label >= 0:
@@ -51,7 +80,7 @@ async def organize_files(cluster_data: dict) -> dict:
                 label=label,
                 name=name,
                 file_count=cluster["file_count"],
-                folder_path=str(target_dir),
+                folder_path=str(root / folder_name),
             )
 
         for file_info in cluster["files"]:
@@ -61,6 +90,11 @@ async def organize_files(cluster_data: dict) -> dict:
             if not src.exists():
                 logger.warning(f"Source file not found: {src}")
                 continue
+
+            # Determine the container (root or root/SubFolder)
+            container = _get_container(src)
+            target_dir = container / folder_name
+            target_dir.mkdir(parents=True, exist_ok=True)
 
             # Skip if already in the target directory
             if src.parent == target_dir:
@@ -78,15 +112,20 @@ async def organize_files(cluster_data: dict) -> dict:
                     counter += 1
 
             try:
-                shutil.move(str(src), str(dest))
-                logger.info(f"Moved: {src} -> {dest}")
+                if use_copy:
+                    shutil.copy2(str(src), str(dest))
+                    logger.info(f"Copied: {src} -> {dest}")
+                else:
+                    shutil.move(str(src), str(dest))
+                    logger.info(f"Moved: {src} -> {dest}")
 
-                # Update file path in-place (preserves faiss_id, cluster_id, etc.)
-                await db.update_file_path(
-                    old_path=str(src),
-                    new_path=str(dest),
-                    new_filename=dest.name,
-                )
+                # Update file path in-place (only when moving, not copying)
+                if not use_copy:
+                    await db.update_file_path(
+                        old_path=str(src),
+                        new_path=str(dest),
+                        new_filename=dest.name,
+                    )
 
                 moves.append({
                     "from": str(src),
@@ -99,7 +138,8 @@ async def organize_files(cluster_data: dict) -> dict:
                 errors.append({"file": str(src), "error": str(e)})
 
     # Clean up empty directories (but not the root)
-    _cleanup_empty_dirs(config.SEFS_ROOT)
+    if not use_copy:
+        _cleanup_empty_dirs(config.SEFS_ROOT)
 
     summary = {
         "moves": len(moves),

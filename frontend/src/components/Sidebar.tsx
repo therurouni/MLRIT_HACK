@@ -10,7 +10,7 @@ interface SidebarProps {
 	vectorCount: number;
 	fileCount: number;
 	wsConnected: boolean;
-	onScanAndCluster: (organize: boolean) => void;
+	onScanAndCluster: (basicOrganize: boolean, semanticOrganize: boolean) => void;
 	processing: boolean;
 	processingStatus: string;
 	onRootChange: (root: string) => void;
@@ -39,6 +39,8 @@ export default function Sidebar({
 }: SidebarProps) {
 	const [rootInput, setRootInput] = useState("");
 	const [changingRoot, setChangingRoot] = useState(false);
+	const [basicOrganize, setBasicOrganize] = useState(false);
+	const [semanticOrganize, setSemanticOrganize] = useState(false);
 
 	const handleSetRoot = async () => {
 		if (!rootInput.trim()) return;
@@ -141,7 +143,7 @@ export default function Sidebar({
 			</nav>
 
 			{/* Actions */}
-			<div className="p-4 border-t border-sefs-border space-y-2">
+			<div className="p-4 border-t border-sefs-border space-y-3">
 				{processing ? (
 					<div className="w-full px-3 py-2 text-sm text-center text-sefs-muted bg-sefs-surface border border-sefs-border rounded-lg">
 						<div className="flex items-center justify-center gap-2">
@@ -168,15 +170,55 @@ export default function Sidebar({
 					</div>
 				) : (
 					<>
+						{/* Organization mode checkboxes */}
+						<div className="space-y-2">
+							<div className="text-xs text-sefs-muted font-medium mb-1">
+								Organization Options
+							</div>
+							<label className="flex items-start gap-2 cursor-pointer group">
+								<input
+									type="checkbox"
+									checked={basicOrganize}
+									onChange={(e) => setBasicOrganize(e.target.checked)}
+									className="mt-0.5 w-3.5 h-3.5 rounded border-sefs-border text-sefs-accent focus:ring-sefs-accent bg-sefs-bg"
+								/>
+								<div>
+									<span className="text-xs text-sefs-text group-hover:text-sefs-accent transition-colors">
+										Basic Organize
+									</span>
+									<p className="text-[10px] text-sefs-muted leading-tight mt-0.5">
+										Sort files by type (Images, Documents, Code, etc.) in the original folder
+									</p>
+								</div>
+							</label>
+							<label className="flex items-start gap-2 cursor-pointer group">
+								<input
+									type="checkbox"
+									checked={semanticOrganize}
+									onChange={(e) => setSemanticOrganize(e.target.checked)}
+									className="mt-0.5 w-3.5 h-3.5 rounded border-sefs-border text-sefs-accent focus:ring-sefs-accent bg-sefs-bg"
+								/>
+								<div>
+									<span className="text-xs text-sefs-text group-hover:text-sefs-accent transition-colors">
+										Semantic Organize
+									</span>
+									<p className="text-[10px] text-sefs-muted leading-tight mt-0.5">
+										Cluster by content and organize into a <em>-semantic</em> replica folder
+									</p>
+								</div>
+							</label>
+						</div>
+
 						<button
-							onClick={() => onScanAndCluster(false)}
+							onClick={() =>
+								onScanAndCluster(basicOrganize, semanticOrganize)
+							}
 							className="w-full px-3 py-2 text-sm bg-sefs-accent text-white rounded-lg hover:bg-sefs-accentHover transition-colors">
-							Scan & Cluster
-						</button>
-						<button
-							onClick={() => onScanAndCluster(true)}
-							className="w-full px-3 py-2 text-sm bg-sefs-warning/10 text-sefs-warning border border-sefs-warning/30 rounded-lg hover:bg-sefs-warning/20 transition-colors">
-							Scan, Cluster & Organize
+							{basicOrganize && !semanticOrganize
+								? "Organize by Type"
+								: semanticOrganize
+									? "Scan, Cluster & Organize"
+									: "Scan & Cluster"}
 						</button>
 					</>
 				)}
