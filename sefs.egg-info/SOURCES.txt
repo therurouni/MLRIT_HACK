@@ -1,3 +1,4 @@
+README.md
 pyproject.toml
 backend/__init__.py
 backend/cluster_namer.py

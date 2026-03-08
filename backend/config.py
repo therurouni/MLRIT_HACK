@@ -11,8 +11,17 @@ _env_path = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(_env_path)
 
 # ─── Paths ────────────────────────────────────────────────────────────────────
-# Root folder the user wants to organize
-SEFS_ROOT = Path(os.environ.get("SEFS_ROOT", Path.home() / "sefs-root"))
+# Project root (directory containing pyproject.toml)
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+# Root folder the user wants to organize (resolved relative to project root)
+_raw_root = os.environ.get("SEFS_ROOT", "")
+if not _raw_root:
+    SEFS_ROOT = Path.home() / "sefs-root"
+elif Path(_raw_root).is_absolute():
+    SEFS_ROOT = Path(_raw_root)
+else:
+    SEFS_ROOT = (_PROJECT_ROOT / _raw_root).resolve()
 
 # Internal data directory (FAISS index, SQLite DB)
 DATA_DIR = Path(os.environ.get("SEFS_DATA_DIR", SEFS_ROOT / ".sefs-data"))

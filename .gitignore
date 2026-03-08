@@ -1,0 +1,22 @@
+# Environment
+.env
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyd
+*.egg-info/
+sefs.egg-info/
+
+# SEFS data (runtime-generated)
+sefs-root/
+.sefs-data/
+
+# Node
+node_modules/
+dist/
+
+# OS
+.DS_Store
+Thumbs.db
