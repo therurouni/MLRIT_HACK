@@ -53,42 +53,42 @@ export default function Sidebar({
 	};
 
 	return (
-		<aside className="w-64 bg-sefs-surface border-r border-sefs-border flex flex-col h-full">
+		<aside className="w-64 bg-claude-surface border-r border-claude-border flex flex-col h-full">
 			{/* Header */}
-			<div className="p-4 border-b border-sefs-border">
-				<h1 className="text-xl font-bold text-sefs-accent">SEFS</h1>
-				<p className="text-xs text-sefs-muted mt-1">
+			<div className="p-4 border-b border-claude-border">
+				<h1 className="text-xl font-bold text-claude-accent">SEFS</h1>
+				<p className="text-xs text-claude-muted mt-1">
 					Semantic Entropy File System
 				</p>
 			</div>
 
 			{/* Status indicators */}
-			<div className="px-4 py-3 border-b border-sefs-border space-y-1.5">
+			<div className="px-4 py-3 border-b border-claude-border space-y-1.5">
 				<div className="flex items-center gap-2 text-xs">
 					<span
-						className={`w-2 h-2 rounded-full ${ollamaOk ? "bg-sefs-success" : "bg-sefs-error"}`}
+						className={`w-2 h-2 rounded-full ${ollamaOk ? "bg-claude-success" : "bg-claude-error"}`}
 					/>
-					<span className="text-sefs-muted">
+					<span className="text-claude-muted">
 						Ollama {ollamaOk ? "Connected" : "Offline"}
 					</span>
 				</div>
 				<div className="flex items-center gap-2 text-xs">
 					<span
-						className={`w-2 h-2 rounded-full ${wsConnected ? "bg-sefs-success" : "bg-sefs-error"}`}
+						className={`w-2 h-2 rounded-full ${wsConnected ? "bg-claude-success" : "bg-claude-error"}`}
 					/>
-					<span className="text-sefs-muted">
+					<span className="text-claude-muted">
 						WebSocket {wsConnected ? "Live" : "Disconnected"}
 					</span>
 				</div>
-				<div className="text-xs text-sefs-muted">
+				<div className="text-xs text-claude-muted">
 					{fileCount} files · {vectorCount} vectors
 				</div>
 			</div>
 
 			{/* Root folder */}
-			<div className="px-4 py-3 border-b border-sefs-border">
-				<div className="text-xs text-sefs-muted mb-1">Root Folder</div>
-				<div className="text-xs text-sefs-text truncate" title={root}>
+			<div className="px-4 py-3 border-b border-claude-border">
+				<div className="text-xs text-claude-muted mb-1">Root Folder</div>
+				<div className="text-xs text-claude-text truncate" title={root}>
 					{root || "Not set"}
 				</div>
 				{changingRoot ? (
@@ -99,17 +99,17 @@ export default function Sidebar({
 							onChange={(e) => setRootInput(e.target.value)}
 							onKeyDown={(e) => e.key === "Enter" && handleSetRoot()}
 							placeholder="/path/to/folder"
-							className="w-full px-2 py-1 text-xs bg-sefs-bg border border-sefs-border rounded text-sefs-text focus:outline-none focus:border-sefs-accent"
+							className="w-full px-2 py-1 text-xs bg-claude-bg border border-claude-border rounded text-claude-text focus:outline-none focus:border-claude-accent"
 						/>
 						<div className="flex gap-1">
 							<button
 								onClick={handleSetRoot}
-								className="flex-1 px-2 py-1 text-xs bg-sefs-accent text-white rounded hover:bg-sefs-accentHover">
+								className="flex-1 px-2 py-1 text-xs bg-claude-accent text-white rounded hover:bg-claude-accentHover">
 								Set
 							</button>
 							<button
 								onClick={() => setChangingRoot(false)}
-								className="flex-1 px-2 py-1 text-xs bg-sefs-bg text-sefs-muted rounded hover:text-sefs-text">
+								className="flex-1 px-2 py-1 text-xs bg-claude-bg text-claude-muted rounded hover:text-claude-text">
 								Cancel
 							</button>
 						</div>
@@ -117,7 +117,7 @@ export default function Sidebar({
 				) : (
 					<button
 						onClick={() => setChangingRoot(true)}
-						className="mt-1 text-xs text-sefs-accent hover:text-sefs-accentHover">
+						className="mt-1 text-xs text-claude-accent hover:text-claude-accentHover">
 						Change
 					</button>
 				)}
@@ -131,8 +131,8 @@ export default function Sidebar({
 						onClick={() => onTabChange(tab.id)}
 						className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
 							activeTab === tab.id
-								? "bg-sefs-accent/10 text-sefs-accent border-r-2 border-sefs-accent"
-								: "text-sefs-muted hover:text-sefs-text hover:bg-sefs-bg/50"
+								? "bg-claude-accent/10 text-claude-accent border-r-2 border-claude-accent"
+								: "text-claude-muted hover:text-claude-text hover:bg-claude-bg/50"
 						}`}>
 						<span>{tab.icon}</span>
 						<span>{tab.label}</span>
@@ -141,12 +141,12 @@ export default function Sidebar({
 			</nav>
 
 			{/* Actions */}
-			<div className="p-4 border-t border-sefs-border space-y-2">
+			<div className="p-4 border-t border-claude-border space-y-2">
 				{processing ? (
-					<div className="w-full px-3 py-2 text-sm text-center text-sefs-muted bg-sefs-surface border border-sefs-border rounded-lg">
+					<div className="w-full px-3 py-2 text-sm text-center text-claude-muted bg-claude-surface border border-claude-border rounded-lg">
 						<div className="flex items-center justify-center gap-2">
 							<svg
-								className="animate-spin h-4 w-4 text-sefs-accent"
+								className="animate-spin h-4 w-4 text-claude-accent"
 								viewBox="0 0 24 24">
 								<circle
 									className="opacity-25"
@@ -170,12 +170,12 @@ export default function Sidebar({
 					<>
 						<button
 							onClick={() => onScanAndCluster(false)}
-							className="w-full px-3 py-2 text-sm bg-sefs-accent text-white rounded-lg hover:bg-sefs-accentHover transition-colors">
+							className="w-full px-3 py-2 text-sm bg-claude-accent text-white rounded-lg hover:bg-claude-accentHover transition-colors">
 							Scan & Cluster
 						</button>
 						<button
 							onClick={() => onScanAndCluster(true)}
-							className="w-full px-3 py-2 text-sm bg-sefs-warning/10 text-sefs-warning border border-sefs-warning/30 rounded-lg hover:bg-sefs-warning/20 transition-colors">
+							className="w-full px-3 py-2 text-sm bg-claude-warning/10 text-claude-warning border border-claude-warning/30 rounded-lg hover:bg-claude-warning/20 transition-colors">
 							Scan, Cluster & Organize
 						</button>
 					</>

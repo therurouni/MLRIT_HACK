@@ -177,9 +177,9 @@ export default function ForceGraph() {
 
 	if (loading) {
 		return (
-			<div className="flex items-center justify-center h-full text-sefs-muted">
+			<div className="flex items-center justify-center h-full text-claude-muted">
 				<div className="text-center">
-					<div className="text-4xl mb-2 animate-spin text-sefs-accent">*</div>
+					<div className="text-4xl mb-2 animate-spin text-claude-accent">*</div>
 					<p>Loading graph...</p>
 				</div>
 			</div>
@@ -188,13 +188,13 @@ export default function ForceGraph() {
 
 	if (error) {
 		return (
-			<div className="flex items-center justify-center h-full text-sefs-error">
+			<div className="flex items-center justify-center h-full text-claude-error">
 				<div className="text-center">
 					<p className="text-xl mb-2">Graph Error</p>
 					<p className="text-sm">{error}</p>
 					<button
 						onClick={loadGraph}
-						className="mt-4 px-4 py-2 bg-sefs-accent text-white rounded hover:bg-sefs-accentHover">
+						className="mt-4 px-4 py-2 bg-claude-accent text-white rounded hover:bg-claude-accentHover">
 						Retry
 					</button>
 				</div>
@@ -204,15 +204,15 @@ export default function ForceGraph() {
 
 	if (!graphData || graphData.nodes.length === 0) {
 		return (
-			<div className="flex flex-col items-center justify-center h-full text-sefs-muted">
-				<div className="text-4xl mb-4 text-sefs-muted font-bold">--</div>
+			<div className="flex flex-col items-center justify-center h-full text-claude-muted">
+				<div className="text-4xl mb-4 text-claude-muted font-bold">--</div>
 				<h2 className="text-xl font-semibold mb-2">No graph data</h2>
 				<p className="text-sm">
 					Scan files and run clustering to see the force-directed graph.
 				</p>
 				<button
 					onClick={loadGraph}
-					className="mt-4 px-4 py-2 bg-sefs-accent text-white rounded-lg hover:bg-sefs-accentHover">
+					className="mt-4 px-4 py-2 bg-claude-accent text-white rounded-lg hover:bg-claude-accentHover">
 					Refresh
 				</button>
 			</div>
@@ -227,7 +227,7 @@ export default function ForceGraph() {
 					{graphData.clusters.map((c) => (
 						<span
 							key={c.label}
-							className="flex items-center gap-1 text-xs text-sefs-muted">
+							className="flex items-center gap-1 text-xs text-claude-muted">
 							<span
 								className="w-3 h-3 rounded-full inline-block"
 								style={{ backgroundColor: getColor(c.label) }}
@@ -237,12 +237,12 @@ export default function ForceGraph() {
 					))}
 					<button
 						onClick={loadGraph}
-						className="ml-2 px-3 py-1 text-xs bg-sefs-surface border border-sefs-border rounded hover:border-sefs-accent">
+						className="ml-2 px-3 py-1 text-xs bg-claude-surface border border-claude-border rounded hover:border-claude-accent">
 						Refresh
 					</button>
 				</div>
 			</div>
-			<div className="flex-1 bg-sefs-bg rounded-lg border border-sefs-border overflow-hidden">
+			<div className="flex-1 bg-claude-bg rounded-lg border border-claude-border overflow-hidden">
 				<svg ref={svgRef} width="100%" height="100%" />
 			</div>
 		</div>
