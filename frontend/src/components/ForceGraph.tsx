@@ -1,24 +1,25 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { getGraphData } from "../api";
 import * as d3 from "d3";
 import type { GraphNode, GraphLink, GraphData } from "../types";
 
+// Warm color palette matching the reference image
 const CLUSTER_COLORS = [
-	"#3b82f6",
-	"#22c55e",
-	"#a855f7",
-	"#f97316",
-	"#ec4899",
-	"#06b6d4",
-	"#eab308",
-	"#ef4444",
-	"#6366f1",
-	"#14b8a6",
-	"#f43f5e",
-	"#84cc16",
-	"#8b5cf6",
-	"#0ea5e9",
-	"#d946ef",
+	"#D97757", // warm orange (primary/accent)
+	"#3b82f6", // blue
+	"#22c55e", // green
+	"#a855f7", // purple
+	"#ec4899", // pink
+	"#eab308", // yellow
+	"#06b6d4", // cyan
+	"#ef4444", // red
+	"#6366f1", // indigo
+	"#14b8a6", // teal
+	"#f43f5e", // rose
+	"#84cc16", // lime
+	"#8b5cf6", // violet
+	"#0ea5e9", // sky
+	"#d946ef", // fuchsia
 ];
 
 const UNCLUSTERED_COLOR = "#4b5563";
@@ -28,11 +29,34 @@ function getColor(clusterId: number): string {
 	return CLUSTER_COLORS[clusterId % CLUSTER_COLORS.length];
 }
 
-export default function ForceGraph() {
+interface ForceGraphProps {
+	onNodeClick?: (nodeId: number, clusterId: number) => void;
+	onClusterClick?: (clusterId: number, clusterName: string, childNodes: { id: number; label: string }[]) => void;
+	selectedNodeId?: number | null;
+}
+
+interface ClusterCenter {
+	id: string;
+	label: string;
+	cluster_id: number;
+	cluster_name: string;
+	isCenter: true;
+	fileCount: number;
+	x?: number;
+	y?: number;
+	fx?: number | null;
+	fy?: number | null;
+}
+
+type SimNode = (GraphNode & { isCenter?: false }) | ClusterCenter;
+
+export default function ForceGraph({ onNodeClick, onClusterClick, selectedNodeId }: ForceGraphProps) {
 	const svgRef = useRef<SVGSVGElement>(null);
 	const [loading, setLoading] = useState(false);
 	const [graphData, setGraphData] = useState<GraphData | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const [zoomLevel, setZoomLevel] = useState(1);
+	const zoomBehaviorRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
 
 	const loadGraph = async () => {
 		setLoading(true);
@@ -51,6 +75,36 @@ export default function ForceGraph() {
 		loadGraph();
 	}, []);
 
+	const handleZoomIn = useCallback(() => {
+		if (svgRef.current && zoomBehaviorRef.current) {
+			d3.select(svgRef.current)
+				.transition()
+				.duration(300)
+				.call(zoomBehaviorRef.current.scaleBy, 1.3);
+		}
+	}, []);
+
+	const handleZoomOut = useCallback(() => {
+		if (svgRef.current && zoomBehaviorRef.current) {
+			d3.select(svgRef.current)
+				.transition()
+				.duration(300)
+				.call(zoomBehaviorRef.current.scaleBy, 0.7);
+		}
+	}, []);
+
+	const handleFitView = useCallback(() => {
+		if (svgRef.current && zoomBehaviorRef.current) {
+			d3.select(svgRef.current)
+				.transition()
+				.duration(500)
+				.call(
+					zoomBehaviorRef.current.transform,
+					d3.zoomIdentity,
+				);
+		}
+	}, []);
+
 	useEffect(() => {
 		if (!graphData || !svgRef.current) return;
 		if (graphData.nodes.length === 0) return;
@@ -61,58 +115,98 @@ export default function ForceGraph() {
 		const width = svgRef.current.clientWidth;
 		const height = svgRef.current.clientHeight;
 
-		// Zoom behavior
+		// Build cluster centers
+		const clusterFileCounts: Record<number, number> = {};
+		for (const n of graphData.nodes) {
+			const cid = n.cluster_id;
+			if (cid >= 0) {
+				clusterFileCounts[cid] = (clusterFileCounts[cid] || 0) + 1;
+			}
+		}
+
+		const centerNodes: ClusterCenter[] = graphData.clusters.map((c) => ({
+			id: `center-${c.label}`,
+			label: c.name,
+			cluster_id: c.label,
+			cluster_name: c.name,
+			isCenter: true as const,
+			fileCount: clusterFileCounts[c.label] || 0,
+		}));
+
+		const fileNodes: (GraphNode & { isCenter?: false })[] = graphData.nodes.map((d) => ({
+			...d,
+			isCenter: false as const,
+		}));
+
+		const allNodes: SimNode[] = [...centerNodes, ...fileNodes];
+
+		// Build links: files connect to their cluster center (skip null/undefined/negative cluster_ids)
+		const centerLabelSet = new Set(graphData.clusters.map((c) => c.label));
+		const allLinks: { source: string | number; target: string | number; cluster_id: number }[] =
+			[];
+		for (const n of graphData.nodes) {
+			if (n.cluster_id != null && n.cluster_id >= 0 && centerLabelSet.has(n.cluster_id)) {
+				allLinks.push({
+					source: `center-${n.cluster_id}`,
+					target: n.id,
+					cluster_id: n.cluster_id,
+				});
+			}
+		}
+
+		// Zoom
 		const g = svg.append("g");
 		const zoom = d3
 			.zoom<SVGSVGElement, unknown>()
-			.scaleExtent([0.1, 4])
+			.scaleExtent([0.1, 6])
 			.on("zoom", (event) => {
 				g.attr("transform", event.transform);
+				setZoomLevel(event.transform.k);
 			});
 		svg.call(zoom);
+		zoomBehaviorRef.current = zoom;
 
-		// Create nodes and links with proper typing
-		const nodes: GraphNode[] = graphData.nodes.map((d) => ({ ...d }));
-		const links: GraphLink[] = graphData.links.map((d) => ({ ...d }));
-
-		// Simulation
+		// Force simulation
 		const simulation = d3
-			.forceSimulation(nodes as any)
+			.forceSimulation(allNodes as any)
 			.force(
 				"link",
 				d3
-					.forceLink(links as any)
-					.id((d: any) => d.id)
-					.distance(80),
+					.forceLink(allLinks as any)
+					.id((d: any) => d.id ?? d)
+					.distance((d: any) => {
+						return 100;
+					})
+					.strength(0.6),
 			)
-			.force("charge", d3.forceManyBody().strength(-200))
+			.force("charge", d3.forceManyBody().strength((d: any) => {
+				return d.isCenter ? -600 : -120;
+			}))
 			.force("center", d3.forceCenter(width / 2, height / 2))
-			.force("collision", d3.forceCollide().radius(30));
+			.force("collision", d3.forceCollide().radius((d: any) => {
+				return d.isCenter ? 40 : 14;
+			}));
 
 		// Links
 		const link = g
 			.append("g")
 			.selectAll("line")
-			.data(links)
+			.data(allLinks)
 			.join("line")
 			.attr("stroke", (d) => getColor(d.cluster_id))
-			.attr("stroke-opacity", 0.3)
-			.attr("stroke-width", 1.5);
+			.attr("stroke-opacity", 0.35)
+			.attr("stroke-width", 2.5);
 
-		// Nodes
+		// Node groups
 		const node = g
 			.append("g")
-			.selectAll("circle")
-			.data(nodes)
-			.join("circle")
-			.attr("r", 8)
-			.attr("fill", (d) => getColor(d.cluster_id))
-			.attr("stroke", "#1e293b")
-			.attr("stroke-width", 2)
+			.selectAll<SVGGElement, SimNode>("g")
+			.data(allNodes)
+			.join("g")
 			.style("cursor", "pointer")
 			.call(
 				d3
-					.drag<SVGCircleElement, GraphNode>()
+					.drag<SVGGElement, SimNode>()
 					.on("start", (event, d: any) => {
 						if (!event.active) simulation.alphaTarget(0.3).restart();
 						d.fx = d.x;
@@ -129,33 +223,95 @@ export default function ForceGraph() {
 					}) as any,
 			);
 
-		// Labels
-		const labels = g
-			.append("g")
-			.selectAll("text")
-			.data(nodes)
-			.join("text")
-			.text((d) => d.label)
-			.attr("font-size", 10)
-			.attr("fill", "#94a3b8")
-			.attr("dx", 12)
-			.attr("dy", 4);
+		const nodeRadius = (d: SimNode) => {
+			if (d.isCenter) return 24 + Math.min((d as ClusterCenter).fileCount * 2, 20);
+			return 8;
+		};
 
-		// Tooltip
+		// Circles for each node
+		node
+			.append("circle")
+			.attr("r", nodeRadius)
+			.attr("fill", (d) => {
+				const color = getColor(d.cluster_id);
+				return d.isCenter ? color : color;
+			})
+			.attr("fill-opacity", (d) => (d.isCenter ? 0.85 : 0.9))
+			.attr("stroke", (d) => {
+				if (!d.isCenter && selectedNodeId !== undefined && selectedNodeId === (d as GraphNode).id) {
+					return "#fff";
+				}
+				return "none";
+			})
+			.attr("stroke-width", 2);
+
+		// Labels for cluster centers
+		node
+			.filter((d): d is ClusterCenter => d.isCenter === true)
+			.append("text")
+			.text((d) => d.cluster_name)
+			.attr("text-anchor", "middle")
+			.attr("dy", (d) => -(28 + Math.min((d as ClusterCenter).fileCount * 2, 20)))
+			.attr("font-size", 13)
+			.attr("font-weight", "600")
+			.attr("fill", (d) => getColor(d.cluster_id))
+			.attr("paint-order", "stroke")
+			.attr("stroke", "#1C1917")
+			.attr("stroke-width", 3);
+
+		// Labels for file nodes
+		node
+			.filter((d) => !d.isCenter)
+			.append("text")
+			.text((d) => d.label)
+			.attr("dx", 12)
+			.attr("dy", 4)
+			.attr("font-size", 10)
+			.attr("fill", "#A8A29E")
+			.attr("paint-order", "stroke")
+			.attr("stroke", "#1C1917")
+			.attr("stroke-width", 2);
+
+		// Hover effects
 		node
 			.on("mouseover", function (event, d) {
-				d3.select(this).attr("r", 12).attr("stroke", "#f8fafc");
-				labels
-					.filter((l) => l.id === d.id)
-					.attr("fill", "#f8fafc")
+				d3.select(this)
+					.select("circle")
+					.transition()
+					.duration(150)
+					.attr("r", d.isCenter ? nodeRadius(d) + 4 : 12)
+					.attr("fill-opacity", 1);
+				d3.select(this)
+					.select("text")
+					.transition()
+					.duration(150)
+					.attr("fill", "#F5F0EB")
 					.attr("font-weight", "bold");
 			})
 			.on("mouseout", function (event, d) {
-				d3.select(this).attr("r", 8).attr("stroke", "#1e293b");
-				labels
-					.filter((l) => l.id === d.id)
-					.attr("fill", "#94a3b8")
-					.attr("font-weight", "normal");
+				d3.select(this)
+					.select("circle")
+					.transition()
+					.duration(150)
+					.attr("r", nodeRadius(d))
+					.attr("fill-opacity", d.isCenter ? 0.85 : 0.9);
+				d3.select(this)
+					.select("text")
+					.transition()
+					.duration(150)
+					.attr("fill", d.isCenter ? getColor(d.cluster_id) : "#A8A29E")
+					.attr("font-weight", d.isCenter ? "600" : "normal");
+			})
+			.on("click", (event, d) => {
+				if (d.isCenter && onClusterClick) {
+					// Collect all children of this cluster
+					const children = graphData.nodes
+						.filter((n) => n.cluster_id === d.cluster_id)
+						.map((n) => ({ id: n.id, label: n.label }));
+					onClusterClick(d.cluster_id, d.cluster_name, children);
+				} else if (!d.isCenter && onNodeClick) {
+					onNodeClick((d as GraphNode).id, d.cluster_id);
+				}
 			});
 
 		// Tick
@@ -166,14 +322,13 @@ export default function ForceGraph() {
 				.attr("x2", (d: any) => d.target.x)
 				.attr("y2", (d: any) => d.target.y);
 
-			node.attr("cx", (d: any) => d.x).attr("cy", (d: any) => d.y);
-			labels.attr("x", (d: any) => d.x).attr("y", (d: any) => d.y);
+			node.attr("transform", (d: any) => `translate(${d.x},${d.y})`);
 		});
 
 		return () => {
 			simulation.stop();
 		};
-	}, [graphData]);
+	}, [graphData, selectedNodeId, onNodeClick]);
 
 	if (loading) {
 		return (
@@ -219,31 +374,71 @@ export default function ForceGraph() {
 		);
 	}
 
+	// Build cluster legend
+	const clusterInfo = graphData.clusters.map((c) => ({
+		label: c.label,
+		name: c.name,
+		count: graphData.nodes.filter((n) => n.cluster_id === c.label).length,
+	}));
+
 	return (
-		<div className="h-full flex flex-col">
-			<div className="flex items-center justify-between mb-2">
-				<h2 className="text-lg font-semibold">Force-Directed Graph</h2>
-				<div className="flex items-center gap-2">
-					{graphData.clusters.map((c) => (
-						<span
-							key={c.label}
-							className="flex items-center gap-1 text-xs text-claude-muted">
+		<div className="h-full relative">
+			{/* SVG canvas */}
+			<svg
+				ref={svgRef}
+				width="100%"
+				height="100%"
+				className="bg-claude-bg"
+			/>
+
+			{/* Zoom controls - right side */}
+			<div className="absolute top-4 right-4 flex flex-col gap-1 bg-claude-surface/90 backdrop-blur-sm border border-claude-border rounded-lg p-1">
+				<button
+					onClick={handleZoomIn}
+					className="w-8 h-8 flex items-center justify-center text-claude-muted hover:text-claude-text hover:bg-claude-bg rounded transition-colors text-sm">
+					+
+				</button>
+				<button
+					onClick={handleZoomOut}
+					className="w-8 h-8 flex items-center justify-center text-claude-muted hover:text-claude-text hover:bg-claude-bg rounded transition-colors text-sm">
+					−
+				</button>
+				<div className="border-t border-claude-border my-0.5" />
+				<button
+					onClick={handleFitView}
+					className="w-8 h-8 flex items-center justify-center text-claude-muted hover:text-claude-text hover:bg-claude-bg rounded transition-colors text-xs">
+					⤢
+				</button>
+			</div>
+
+			{/* Cluster legend - bottom left */}
+			<div className="absolute bottom-4 left-4 bg-claude-surface/90 backdrop-blur-sm border border-claude-border rounded-lg p-3 max-w-[220px]">
+				<div className="text-[11px] font-medium text-claude-muted uppercase tracking-wider mb-2">
+					Clusters
+				</div>
+				<div className="space-y-1.5">
+					{clusterInfo.map((c) => (
+						<div key={c.label} className="flex items-center gap-2">
 							<span
-								className="w-3 h-3 rounded-full inline-block"
+								className="w-2.5 h-2.5 rounded-full shrink-0"
 								style={{ backgroundColor: getColor(c.label) }}
 							/>
-							{c.name}
-						</span>
+							<span className="text-xs text-claude-text truncate flex-1">
+								{c.name}
+							</span>
+							<span className="text-[10px] text-claude-muted">({c.count})</span>
+						</div>
 					))}
-					<button
-						onClick={loadGraph}
-						className="ml-2 px-3 py-1 text-xs bg-claude-surface border border-claude-border rounded hover:border-claude-accent">
-						Refresh
-					</button>
 				</div>
 			</div>
-			<div className="flex-1 bg-claude-bg rounded-lg border border-claude-border overflow-hidden">
-				<svg ref={svgRef} width="100%" height="100%" />
+
+			{/* Performance indicator - bottom right */}
+			<div className="absolute bottom-4 right-4">
+				<div className="flex items-center gap-1.5 bg-claude-surface/90 backdrop-blur-sm border border-claude-border rounded-lg px-3 py-1.5 text-xs text-claude-muted">
+					<span className="text-claude-accent">✦</span>
+					Performance
+					<span className="text-[10px]">▴</span>
+				</div>
 			</div>
 		</div>
 	);

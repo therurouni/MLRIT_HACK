@@ -3,13 +3,13 @@ import { getUmapData } from "../api";
 import type { UmapPoint } from "../types";
 
 const CLUSTER_COLORS = [
+	"#D97757",
 	"#3b82f6",
 	"#22c55e",
 	"#a855f7",
-	"#f97316",
 	"#ec4899",
-	"#06b6d4",
 	"#eab308",
+	"#06b6d4",
 	"#ef4444",
 	"#6366f1",
 	"#14b8a6",
@@ -204,54 +204,69 @@ export default function UmapView() {
 	);
 
 	return (
-		<div className="h-full flex flex-col">
-			<div className="flex items-center justify-between mb-2">
-				<h2 className="text-lg font-semibold">UMAP Spatial View</h2>
-				<div className="flex items-center gap-3">
-					{clusterLabels.map((label) => {
-						const name =
-							points.find((p) => p.cluster_label === label)?.cluster_name ||
-							`Cluster ${label}`;
-						return (
-							<span
-								key={label}
-								className="flex items-center gap-1 text-xs text-claude-muted">
-								<span
-									className="w-3 h-3 rounded-full inline-block"
-									style={{ backgroundColor: getColor(label) }}
-								/>
-								{label < 0 ? "Unclustered" : name}
-							</span>
-						);
-					})}
-					<button
-						onClick={loadData}
-						className="ml-2 px-3 py-1 text-xs bg-claude-surface border border-claude-border rounded hover:border-claude-accent">
-						Refresh
-					</button>
-				</div>
-			</div>
+		<div className="h-full relative">
 			<div
 				ref={containerRef}
-				className="flex-1 bg-claude-bg rounded-lg border border-claude-border overflow-hidden relative">
+				className="w-full h-full bg-claude-bg overflow-hidden">
 				<canvas
 					ref={canvasRef}
 					onMouseMove={handleMouseMove}
 					className="w-full h-full"
 				/>
-				{hoveredPoint && (
-					<div className="absolute bottom-4 left-4 bg-claude-surface border border-claude-border rounded-lg px-3 py-2 text-sm">
-						<div className="font-semibold">{hoveredPoint.filename}</div>
-						<div className="text-xs text-claude-muted">
-							Cluster:{" "}
-							{hoveredPoint.cluster_name || `#${hoveredPoint.cluster_label}`}
-						</div>
-						<div className="text-xs text-claude-muted">
-							Position: ({hoveredPoint.x.toFixed(2)},{" "}
-							{hoveredPoint.y.toFixed(2)})
-						</div>
+			</div>
+
+			{/* Cluster legend - bottom left */}
+			<div className="absolute bottom-4 left-4 bg-claude-surface/90 backdrop-blur-sm border border-claude-border rounded-lg p-3 max-w-[220px]">
+				<div className="text-[11px] font-medium text-claude-muted uppercase tracking-wider mb-2">
+					Clusters
+				</div>
+				<div className="space-y-1.5">
+					{clusterLabels.map((label) => {
+						const name =
+							points.find((p) => p.cluster_label === label)?.cluster_name ||
+							`Cluster ${label}`;
+						const count = points.filter(
+							(p) => p.cluster_label === label,
+						).length;
+						return (
+							<div key={label} className="flex items-center gap-2">
+								<span
+									className="w-2.5 h-2.5 rounded-full shrink-0"
+									style={{ backgroundColor: getColor(label) }}
+								/>
+								<span className="text-xs text-claude-text truncate flex-1">
+									{label < 0 ? "Unclustered" : name}
+								</span>
+								<span className="text-[10px] text-claude-muted">
+									({count})
+								</span>
+							</div>
+						);
+					})}
+				</div>
+			</div>
+
+			{/* Hovered point tooltip */}
+			{hoveredPoint && (
+				<div className="absolute top-4 left-4 bg-claude-surface/90 backdrop-blur-sm border border-claude-border rounded-lg px-3 py-2">
+					<div className="text-sm font-semibold text-claude-text">
+						{hoveredPoint.filename}
 					</div>
-				)}
+					<div className="text-xs text-claude-muted mt-0.5">
+						Cluster:{" "}
+						{hoveredPoint.cluster_name ||
+							`#${hoveredPoint.cluster_label}`}
+					</div>
+				</div>
+			)}
+
+			{/* Refresh button */}
+			<div className="absolute top-4 right-4">
+				<button
+					onClick={loadData}
+					className="px-3 py-1.5 text-xs bg-claude-surface/90 backdrop-blur-sm border border-claude-border rounded-lg text-claude-muted hover:text-claude-text hover:border-claude-accent transition-colors">
+					Refresh
+				</button>
 			</div>
 		</div>
 	);

@@ -163,3 +163,45 @@ async def file_stats():
 async def get_scan_flags():
     """Get the organize flags from the latest scan."""
     return _scan_flags
+
+
+@router.get("/{file_id}/similar")
+async def get_similar_files(file_id: int, k: int = 5):
+    """Find files most similar to a given file using vector similarity."""
+    from backend.vector_store import vector_store
+    import numpy as np
+
+    file_rec = await db.get_file_by_id(file_id)
+    if not file_rec:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    faiss_id = file_rec.get("faiss_id")
+    if faiss_id is None:
+        return {"similar": [], "file_id": file_id}
+
+    try:
+        embedding = vector_store.index.reconstruct(faiss_id)
+        results = vector_store.search(np.array(embedding), k=k + 1)
+    except Exception:
+        return {"similar": [], "file_id": file_id}
+
+    embedded_files = await db.get_embedded_files()
+    faiss_to_file = {f["faiss_id"]: f for f in embedded_files}
+
+    similar = []
+    for fid, score in results:
+        if fid == faiss_id:
+            continue
+        f = faiss_to_file.get(fid)
+        if f:
+            similar.append({
+                "file_id": f["id"],
+                "filename": f["filename"],
+                "path": f["path"],
+                "extension": f.get("extension", ""),
+                "cluster_id": f.get("cluster_id"),
+                "cluster_name": f.get("cluster_name", ""),
+                "score": round(score, 4),
+            })
+
+    return {"similar": similar[:k], "file_id": file_id}

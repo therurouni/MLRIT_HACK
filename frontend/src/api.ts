@@ -94,6 +94,12 @@ export async function organizeFiles() {
 	});
 }
 
+export async function getSimilarFiles(fileId: number, k: number = 5) {
+	return fetchJSON<{ similar: any[]; file_id: number }>(
+		`/api/files/${fileId}/similar?k=${k}`,
+	);
+}
+
 // ─── Search ──────────────────────────────────────────────────────────────────
 
 export async function semanticSearch(query: string, k: number = 10) {
