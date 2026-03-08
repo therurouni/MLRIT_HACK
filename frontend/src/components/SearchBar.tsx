@@ -34,12 +34,12 @@ export default function SearchBar() {
 					onChange={(e) => setQuery(e.target.value)}
 					onKeyDown={(e) => e.key === "Enter" && handleSearch()}
 					placeholder="Search your files semantically..."
-					className="flex-1 px-4 py-2.5 bg-sefs-bg border border-sefs-border rounded-lg text-sefs-text placeholder-sefs-muted focus:outline-none focus:border-sefs-accent"
+					className="flex-1 px-4 py-2.5 bg-claude-bg border border-claude-border rounded-lg text-claude-text placeholder-claude-muted focus:outline-none focus:border-claude-accent"
 				/>
 				<button
 					onClick={handleSearch}
 					disabled={loading || !query.trim()}
-					className="px-6 py-2.5 bg-sefs-accent text-white rounded-lg hover:bg-sefs-accentHover disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+					className="px-6 py-2.5 bg-claude-accent text-white rounded-lg hover:bg-claude-accentHover disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
 					{loading ? "..." : "Search"}
 				</button>
 			</div>
@@ -47,8 +47,8 @@ export default function SearchBar() {
 			{/* Results */}
 			<div className="flex-1 overflow-auto">
 				{!searched && (
-					<div className="flex flex-col items-center justify-center h-full text-sefs-muted">
-						<div className="text-4xl mb-4 text-sefs-muted font-bold">?</div>
+					<div className="flex flex-col items-center justify-center h-full text-claude-muted">
+						<div className="text-4xl mb-4 text-claude-muted font-bold">?</div>
 						<p className="text-sm">
 							Enter a query to search your files by meaning, not just keywords.
 						</p>
@@ -56,7 +56,7 @@ export default function SearchBar() {
 				)}
 
 				{searched && results.length === 0 && !loading && (
-					<div className="text-center text-sefs-muted py-8">
+					<div className="text-center text-claude-muted py-8">
 						<p>No results found for "{query}"</p>
 					</div>
 				)}
@@ -64,28 +64,28 @@ export default function SearchBar() {
 				{results.map((r, i) => (
 					<div
 						key={r.file_id}
-						className="mb-3 p-4 bg-sefs-surface border border-sefs-border rounded-lg hover:border-sefs-accent/50 transition-colors">
+						className="mb-3 p-4 bg-claude-surface border border-claude-border rounded-lg hover:border-claude-accent/50 transition-colors">
 						<div className="flex items-center justify-between mb-1">
 							<div className="flex items-center gap-2">
-								<span className="text-sefs-accent font-mono text-xs">
+								<span className="text-claude-accent font-mono text-xs">
 									#{i + 1}
 								</span>
 								<span className="font-medium">{r.filename}</span>
 								{r.cluster_name && (
-									<span className="px-2 py-0.5 text-xs rounded-full bg-sefs-accent/10 text-sefs-accent">
+									<span className="px-2 py-0.5 text-xs rounded-full bg-claude-accent/10 text-claude-accent">
 										{r.cluster_name}
 									</span>
 								)}
 							</div>
-							<span className="text-xs text-sefs-muted">
+							<span className="text-xs text-claude-muted">
 								Score: {(r.score * 100).toFixed(1)}%
 							</span>
 						</div>
-						<p className="text-xs text-sefs-muted truncate" title={r.path}>
+						<p className="text-xs text-claude-muted truncate" title={r.path}>
 							{r.path}
 						</p>
 						{r.content_preview && (
-							<p className="mt-2 text-sm text-sefs-muted/80 line-clamp-2">
+							<p className="mt-2 text-sm text-claude-muted/80 line-clamp-2">
 								{r.content_preview}
 							</p>
 						)}

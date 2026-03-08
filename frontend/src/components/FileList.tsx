@@ -42,8 +42,8 @@ function getClusterColor(clusterId: number | null): string {
 export default function FileList({ files }: FileListProps) {
 	if (files.length === 0) {
 		return (
-			<div className="flex flex-col items-center justify-center h-full text-sefs-muted">
-				<div className="text-4xl mb-4 text-sefs-accent font-bold">--</div>
+			<div className="flex flex-col items-center justify-center h-full text-claude-muted">
+				<div className="text-4xl mb-4 text-claude-accent font-bold">--</div>
 				<h2 className="text-xl font-semibold mb-2">No files yet</h2>
 				<p className="text-sm">
 					Drop files into your root folder or click "Scan Files" to start.
@@ -61,7 +61,7 @@ export default function FileList({ files }: FileListProps) {
 			<div className="overflow-x-auto">
 				<table className="w-full text-sm">
 					<thead>
-						<tr className="border-b border-sefs-border text-sefs-muted text-left">
+						<tr className="border-b border-claude-border text-claude-muted text-left">
 							<th className="pb-2 pr-4 font-medium">Name</th>
 							<th className="pb-2 pr-4 font-medium">Ext</th>
 							<th className="pb-2 pr-4 font-medium">Size</th>
@@ -74,10 +74,10 @@ export default function FileList({ files }: FileListProps) {
 						{files.map((file) => (
 							<tr
 								key={file.id}
-								className="border-b border-sefs-border/50 hover:bg-sefs-bg/50 transition-colors">
+								className="border-b border-claude-border/50 hover:bg-claude-bg/50 transition-colors">
 								<td className="py-2 pr-4">
 									<div className="flex items-center gap-2">
-										<span className="text-base text-sefs-muted">
+										<span className="text-base text-claude-muted">
 											{file.faiss_id !== null ? "*" : "~"}
 										</span>
 										<span className="truncate max-w-xs" title={file.path}>
@@ -85,10 +85,10 @@ export default function FileList({ files }: FileListProps) {
 										</span>
 									</div>
 								</td>
-								<td className="py-2 pr-4 text-sefs-muted">
+								<td className="py-2 pr-4 text-claude-muted">
 									{file.extension || "—"}
 								</td>
-								<td className="py-2 pr-4 text-sefs-muted">
+								<td className="py-2 pr-4 text-claude-muted">
 									{formatBytes(file.size_bytes)}
 								</td>
 								<td className="py-2 pr-4">
@@ -100,17 +100,17 @@ export default function FileList({ files }: FileListProps) {
 											{file.cluster_name}
 										</span>
 									) : (
-										<span className="text-sefs-muted text-xs">—</span>
+										<span className="text-claude-muted text-xs">—</span>
 									)}
 								</td>
 								<td className="py-2 pr-4">
 									{file.faiss_id !== null ? (
-										<span className="text-sefs-success text-xs">✓</span>
+										<span className="text-claude-success text-xs">✓</span>
 									) : (
-										<span className="text-sefs-muted text-xs">—</span>
+										<span className="text-claude-muted text-xs">—</span>
 									)}
 								</td>
-								<td className="py-2 text-sefs-muted text-xs">
+								<td className="py-2 text-claude-muted text-xs">
 									{timeAgo(file.updated_at)}
 								</td>
 							</tr>

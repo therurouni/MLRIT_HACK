@@ -83,7 +83,7 @@ export default function ChatPanel() {
 				<h2 className="text-lg font-semibold">RAG Chat</h2>
 				<button
 					onClick={handleClear}
-					className="px-3 py-1 text-xs text-sefs-muted border border-sefs-border rounded hover:text-sefs-error hover:border-sefs-error transition-colors">
+					className="px-3 py-1 text-xs text-claude-muted border border-claude-border rounded hover:text-claude-error hover:border-claude-error transition-colors">
 					Clear History
 				</button>
 			</div>
@@ -91,8 +91,8 @@ export default function ChatPanel() {
 			{/* Messages */}
 			<div ref={scrollRef} className="flex-1 overflow-auto space-y-3 pb-4">
 				{messages.length === 0 && (
-					<div className="flex flex-col items-center justify-center h-full text-sefs-muted">
-						<div className="text-4xl mb-4 text-sefs-accent font-bold">
+					<div className="flex flex-col items-center justify-center h-full text-claude-muted">
+						<div className="text-4xl mb-4 text-claude-accent font-bold">
 							&gt;_
 						</div>
 						<h3 className="text-lg font-semibold mb-2">SEFS Assistant</h3>
@@ -110,18 +110,18 @@ export default function ChatPanel() {
 						<div
 							className={`max-w-[80%] rounded-lg px-4 py-3 ${
 								msg.role === "user"
-									? "bg-sefs-accent text-white"
-									: "bg-sefs-surface border border-sefs-border"
+									? "bg-claude-accent text-white"
+									: "bg-claude-surface border border-claude-border"
 							}`}>
 							<p className="text-sm whitespace-pre-wrap">{msg.content}</p>
 							{msg.context_files && msg.context_files.length > 0 && (
-								<div className="mt-2 pt-2 border-t border-sefs-border/50">
-									<p className="text-xs text-sefs-muted mb-1">Sources:</p>
+								<div className="mt-2 pt-2 border-t border-claude-border/50">
+									<p className="text-xs text-claude-muted mb-1">Sources:</p>
 									<div className="flex flex-wrap gap-1">
 										{msg.context_files.map((f, i) => (
 											<span
 												key={i}
-												className="px-2 py-0.5 text-xs bg-sefs-bg rounded-full text-sefs-muted">
+												className="px-2 py-0.5 text-xs bg-claude-bg rounded-full text-claude-muted">
 												{f}
 											</span>
 										))}
@@ -134,8 +134,8 @@ export default function ChatPanel() {
 
 				{loading && (
 					<div className="flex justify-start">
-						<div className="bg-sefs-surface border border-sefs-border rounded-lg px-4 py-3">
-							<div className="flex items-center gap-2 text-sm text-sefs-muted">
+						<div className="bg-claude-surface border border-claude-border rounded-lg px-4 py-3">
+							<div className="flex items-center gap-2 text-sm text-claude-muted">
 								<span className="animate-pulse">●</span>
 								<span className="animate-pulse animation-delay-200">●</span>
 								<span className="animate-pulse animation-delay-400">●</span>
@@ -147,7 +147,7 @@ export default function ChatPanel() {
 			</div>
 
 			{/* Input */}
-			<div className="flex gap-2 pt-4 border-t border-sefs-border">
+			<div className="flex gap-2 pt-4 border-t border-claude-border">
 				<input
 					type="text"
 					value={input}
@@ -155,12 +155,12 @@ export default function ChatPanel() {
 					onKeyDown={(e) => e.key === "Enter" && handleSend()}
 					placeholder="Ask about your files..."
 					disabled={loading}
-					className="flex-1 px-4 py-2.5 bg-sefs-bg border border-sefs-border rounded-lg text-sefs-text placeholder-sefs-muted focus:outline-none focus:border-sefs-accent disabled:opacity-50"
+					className="flex-1 px-4 py-2.5 bg-claude-bg border border-claude-border rounded-lg text-claude-text placeholder-claude-muted focus:outline-none focus:border-claude-accent disabled:opacity-50"
 				/>
 				<button
 					onClick={handleSend}
 					disabled={loading || !input.trim()}
-					className="px-6 py-2.5 bg-sefs-accent text-white rounded-lg hover:bg-sefs-accentHover disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+					className="px-6 py-2.5 bg-claude-accent text-white rounded-lg hover:bg-claude-accentHover disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
 					Send
 				</button>
 			</div>

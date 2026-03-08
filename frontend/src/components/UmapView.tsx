@@ -159,9 +159,9 @@ export default function UmapView() {
 
 	if (loading) {
 		return (
-			<div className="flex items-center justify-center h-full text-sefs-muted">
+			<div className="flex items-center justify-center h-full text-claude-muted">
 				<div className="text-center">
-					<div className="text-4xl mb-2 animate-spin text-sefs-accent">*</div>
+					<div className="text-4xl mb-2 animate-spin text-claude-accent">*</div>
 					<p>Loading UMAP projection...</p>
 				</div>
 			</div>
@@ -170,11 +170,11 @@ export default function UmapView() {
 
 	if (error) {
 		return (
-			<div className="flex items-center justify-center h-full text-sefs-error">
+			<div className="flex items-center justify-center h-full text-claude-error">
 				<p>{error}</p>
 				<button
 					onClick={loadData}
-					className="ml-4 px-4 py-2 bg-sefs-accent text-white rounded">
+					className="ml-4 px-4 py-2 bg-claude-accent text-white rounded">
 					Retry
 				</button>
 			</div>
@@ -183,15 +183,15 @@ export default function UmapView() {
 
 	if (points.length === 0) {
 		return (
-			<div className="flex flex-col items-center justify-center h-full text-sefs-muted">
-				<div className="text-4xl mb-4 text-sefs-muted font-bold">--</div>
+			<div className="flex flex-col items-center justify-center h-full text-claude-muted">
+				<div className="text-4xl mb-4 text-claude-muted font-bold">--</div>
 				<h2 className="text-xl font-semibold mb-2">No UMAP data</h2>
 				<p className="text-sm">
 					Run clustering to generate the 2D UMAP projection.
 				</p>
 				<button
 					onClick={loadData}
-					className="mt-4 px-4 py-2 bg-sefs-accent text-white rounded-lg hover:bg-sefs-accentHover">
+					className="mt-4 px-4 py-2 bg-claude-accent text-white rounded-lg hover:bg-claude-accentHover">
 					Refresh
 				</button>
 			</div>
@@ -215,7 +215,7 @@ export default function UmapView() {
 						return (
 							<span
 								key={label}
-								className="flex items-center gap-1 text-xs text-sefs-muted">
+								className="flex items-center gap-1 text-xs text-claude-muted">
 								<span
 									className="w-3 h-3 rounded-full inline-block"
 									style={{ backgroundColor: getColor(label) }}
@@ -226,27 +226,27 @@ export default function UmapView() {
 					})}
 					<button
 						onClick={loadData}
-						className="ml-2 px-3 py-1 text-xs bg-sefs-surface border border-sefs-border rounded hover:border-sefs-accent">
+						className="ml-2 px-3 py-1 text-xs bg-claude-surface border border-claude-border rounded hover:border-claude-accent">
 						Refresh
 					</button>
 				</div>
 			</div>
 			<div
 				ref={containerRef}
-				className="flex-1 bg-sefs-bg rounded-lg border border-sefs-border overflow-hidden relative">
+				className="flex-1 bg-claude-bg rounded-lg border border-claude-border overflow-hidden relative">
 				<canvas
 					ref={canvasRef}
 					onMouseMove={handleMouseMove}
 					className="w-full h-full"
 				/>
 				{hoveredPoint && (
-					<div className="absolute bottom-4 left-4 bg-sefs-surface border border-sefs-border rounded-lg px-3 py-2 text-sm">
+					<div className="absolute bottom-4 left-4 bg-claude-surface border border-claude-border rounded-lg px-3 py-2 text-sm">
 						<div className="font-semibold">{hoveredPoint.filename}</div>
-						<div className="text-xs text-sefs-muted">
+						<div className="text-xs text-claude-muted">
 							Cluster:{" "}
 							{hoveredPoint.cluster_name || `#${hoveredPoint.cluster_label}`}
 						</div>
-						<div className="text-xs text-sefs-muted">
+						<div className="text-xs text-claude-muted">
 							Position: ({hoveredPoint.x.toFixed(2)},{" "}
 							{hoveredPoint.y.toFixed(2)})
 						</div>

@@ -1,6 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { ViewTab, FileRecord, WSEvent } from "./types";
-import { getFiles, getHealth, scanFiles, recluster, basicOrganize } from "./api";
+import {
+	getFiles,
+	getHealth,
+	scanFiles,
+	recluster,
+	basicOrganize,
+} from "./api";
 import { useWebSocket } from "./hooks/useWebSocket";
 import Sidebar from "./components/Sidebar";
 import FileList from "./components/FileList";
@@ -93,14 +99,13 @@ export default function App() {
 			}
 		} else if (t === "scan_complete") {
 			setProcessingStatus("Clustering files...");
-			recluster(
-				pendingOrganize.current,
-				pendingSemanticOrganize.current,
-			).catch((e) => {
-				setProcessing(false);
-				setProcessingStatus("");
-				alert("Clustering failed: " + e.message);
-			});
+			recluster(pendingOrganize.current, pendingSemanticOrganize.current).catch(
+				(e) => {
+					setProcessing(false);
+					setProcessingStatus("");
+					alert("Clustering failed: " + e.message);
+				},
+			);
 		} else if (t === "clustering_complete") {
 			setProcessingStatus("Naming clusters with LLM...");
 		} else if (t === "naming_complete") {
