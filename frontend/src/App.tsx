@@ -19,6 +19,7 @@ import ChatPanel from "./components/ChatPanel";
 import ActivityBar from "./components/ActivityBar";
 import FileDetailsPanel, { type ClusterSelection } from "./components/FileDetailsPanel";
 import SettingsDrawer from "./components/SettingsDrawer";
+import GapAnalysisPanel from "./components/GapAnalysisPanel";
 
 const CLUSTER_COLORS = [
 	"#D97757",
@@ -68,6 +69,9 @@ export default function App() {
 
 	// Settings drawer
 	const [settingsOpen, setSettingsOpen] = useState(false);
+
+	// Gap Analysis modal
+	const [gapAnalysisOpen, setGapAnalysisOpen] = useState(false);
 
 	// Search
 	const [searchQuery, setSearchQuery] = useState("");
@@ -305,6 +309,7 @@ export default function App() {
 							setSelectedClusterId(cid);
 							setClusterSelection(null);
 						}}
+						onGapAnalysis={() => setGapAnalysisOpen(true)}
 					/>
 				)}
 			</div>
@@ -317,6 +322,23 @@ export default function App() {
 				open={searchModalOpen}
 				onClose={() => setSearchModalOpen(false)}
 			/>
+
+			{/* Gap Analysis Modal */}
+			{gapAnalysisOpen && (
+				<div
+					className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+					onClick={(e) => { if (e.target === e.currentTarget) setGapAnalysisOpen(false); }}
+				>
+					<div className="relative w-full max-w-4xl mx-4 max-h-[85vh] bg-claude-bg rounded-2xl shadow-2xl border border-claude-border overflow-hidden flex flex-col">
+						<button
+							onClick={() => setGapAnalysisOpen(false)}
+							className="absolute top-3 right-3 z-10 w-7 h-7 flex items-center justify-center rounded-lg text-claude-muted hover:text-claude-text hover:bg-claude-surface transition-colors text-sm">
+							✕
+						</button>
+						<GapAnalysisPanel />
+					</div>
+				</div>
+			)}
 
 			{/* Settings Drawer */}
 			<SettingsDrawer

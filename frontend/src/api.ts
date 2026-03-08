@@ -70,6 +70,10 @@ export async function getClusters() {
 	return fetchJSON<{ clusters: any[]; total: number }>("/api/clusters");
 }
 
+export async function getGapAnalysis() {
+	return fetchJSON<import('./types').GapAnalysisResult>("/api/clusters/gap-analysis");
+}
+
 export async function recluster(
 	organize: boolean = false,
 	semanticOrganize: boolean = false,

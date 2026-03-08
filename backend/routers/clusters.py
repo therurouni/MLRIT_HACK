@@ -164,3 +164,88 @@ async def organize(background_tasks: BackgroundTasks):
 
     background_tasks.add_task(organize_files, _latest_cluster_data)
     return {"status": "organizing_started"}
+
+
+@router.get("/gap-analysis")
+async def gap_analysis():
+    """
+    Analyse which knowledge topics are absent from the current file corpus.
+    Returns existing cluster topics and AI-detected gaps.
+    """
+    import httpx as _httpx
+    from backend.config import OLLAMA_BASE_URL, LLM_MODEL
+
+    clusters = await db.get_all_clusters()
+    if not clusters:
+        return {"existing": [], "gaps": [], "summary": "No clusters found. Run a scan and cluster first."}
+
+    existing = [
+        {"name": c["name"], "file_count": c.get("file_count", 0)}
+        for c in clusters
+        if c.get("name")
+    ]
+
+    cluster_list = "\n".join(
+        f'- {e["name"]} ({e["file_count"]} files)' for e in existing
+    )
+
+    prompt = f"""You are a learning advisor analyzing someone's personal knowledge base.
+
+Their files are organized into these topic clusters:
+{cluster_list}
+
+Your task: identify IMPORTANT knowledge gaps — meaningful topics that are clearly absent.
+
+Rules:
+- Only suggest gaps that are directly related to the topics present
+- Each gap must be a specific, actionable topic (not vague like "more files")
+- Provide exactly 5-7 gaps
+- For each gap, write one sentence explaining why it matters given what they have
+
+Respond ONLY in this exact JSON format (no markdown, no extra text):
+{{
+  "gaps": [
+    {{"topic": "short-topic-name", "reason": "One sentence explanation."}},
+    {{"topic": "another-topic", "reason": "One sentence explanation."}}
+  ],
+  "summary": "One sentence overall assessment of the knowledge base."
+}}"""
+
+    try:
+        async with _httpx.AsyncClient(
+            base_url=OLLAMA_BASE_URL,
+            timeout=_httpx.Timeout(120.0, connect=10.0),
+        ) as client:
+            response = await client.post(
+                "/api/generate",
+                json={
+                    "model": LLM_MODEL,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {"temperature": 0.4, "num_predict": 600},
+                },
+            )
+            response.raise_for_status()
+            raw = response.json().get("response", "").strip()
+
+        # Extract JSON from the response (model may wrap it)
+        import re as _re, json as _json
+        match = _re.search(r'\{.*\}', raw, _re.DOTALL)
+        if match:
+            parsed = _json.loads(match.group())
+        else:
+            parsed = {"gaps": [], "summary": raw}
+
+        return {
+            "existing": existing,
+            "gaps": parsed.get("gaps", []),
+            "summary": parsed.get("summary", ""),
+        }
+
+    except Exception as e:
+        logger.error(f"Gap analysis failed: {e}", exc_info=True)
+        return {
+            "existing": existing,
+            "gaps": [],
+            "summary": f"Analysis failed: {e}",
+        }

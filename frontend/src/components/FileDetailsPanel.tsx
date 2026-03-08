@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { getFileById, getSimilarFiles, openFile } from "../api";
 import type { FileRecord } from "../types";
@@ -24,6 +25,7 @@ interface FileDetailsPanelProps {
 	clusterColor: string;
 	onClose: () => void;
 	onFileSelect?: (fileId: number, clusterId: number) => void;
+	onGapAnalysis?: () => void;
 }
 
 const EXT_ICONS: Record<string, { label: string; bg: string }> = {
@@ -59,6 +61,7 @@ export default function FileDetailsPanel({
 	clusterColor,
 	onClose,
 	onFileSelect,
+	onGapAnalysis,
 }: FileDetailsPanelProps) {
 	const [file, setFile] = useState<FileRecord | null>(null);
 	const [similar, setSimilar] = useState<SimilarFile[]>([]);
@@ -138,7 +141,7 @@ export default function FileDetailsPanel({
 				<div className="flex-1 overflow-auto">
 					<div className="px-4 py-3">
 						<div className="text-[11px] text-claude-muted font-medium uppercase tracking-wider mb-2">
-							Files in Cluster
+							FILES IN CLUSTER
 						</div>
 						<div className="space-y-0.5">
 							{clusterSelection.children.map((child) => {
@@ -176,6 +179,26 @@ export default function FileDetailsPanel({
 						</div>
 					</div>
 				</div>
+
+				{/* Gap Analysis button */}
+				{onGapAnalysis && (
+				<div className="px-4 pb-4 pt-3 border-t border-claude-border">
+					<button
+						onClick={onGapAnalysis}
+						className="group w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 hover:border-violet-400/50 text-violet-300 hover:text-violet-200">
+						<span className="flex items-center gap-2">
+							<svg className="w-4 h-4 text-violet-400 group-hover:text-violet-300 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+								<circle cx="12" cy="12" r="3"/>
+								<path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/>
+							</svg>
+							Analyze Knowledge Gaps
+						</span>
+						<svg className="w-3.5 h-3.5 text-violet-500 group-hover:text-violet-300 group-hover:translate-x-0.5 transition-all" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+							<path d="M5 12h14M12 5l7 7-7 7"/>
+						</svg>
+						</button>
+					</div>
+				)}
 			</div>
 		);
 	}

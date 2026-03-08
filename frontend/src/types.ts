@@ -88,4 +88,15 @@ export interface EventRecord {
 	created_at: number;
 }
 
-export type ViewTab = "files" | "graph" | "umap" | "search" | "chat";
+export type ViewTab = "files" | "graph" | "umap" | "search" | "chat" | "gaps";
+
+export interface GapTopic {
+	topic: string;
+	reason: string;
+}
+
+export interface GapAnalysisResult {
+	existing: { name: string; file_count: number }[];
+	gaps: GapTopic[];
+	summary: string;
+}
