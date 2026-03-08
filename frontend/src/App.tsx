@@ -13,6 +13,7 @@ import TopNav from "./components/TopNav";
 import FileList from "./components/FileList";
 import ForceGraph from "./components/ForceGraph";
 import UmapView from "./components/UmapView";
+import SpatialView from "./components/SpatialView";
 import SearchBar from "./components/SearchBar";
 import SearchModal from "./components/SearchModal";
 import ChatPanel from "./components/ChatPanel";
@@ -276,7 +277,13 @@ export default function App() {
 							selectedNodeId={selectedFileId}
 						/>
 					)}
-					{activeTab === "umap" && <UmapView key={umapKey} />}
+					{activeTab === "umap" && (
+						<SpatialView
+							key={umapKey}
+							onNodeClick={(fileId, clusterId) => handleNodeClick(fileId, clusterId)}
+							searchQuery={searchQuery}
+						/>
+					)}
 					{activeTab === "files" && (
 						<div className="p-4 h-full overflow-auto">
 							<FileList files={files} />
