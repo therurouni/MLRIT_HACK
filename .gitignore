@@ -12,6 +12,7 @@ sefs.egg-info/
 # SEFS data (runtime-generated)
 sefs-root/
 .sefs-data/
+sefs-root-semantic/
 
 # Node
 node_modules/

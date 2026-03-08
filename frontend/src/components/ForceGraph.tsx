@@ -542,15 +542,6 @@ export default function ForceGraph({ onNodeClick, onClusterClick, selectedNodeId
 					))}
 				</div>
 			</div>
-
-			{/* Performance indicator - bottom right */}
-			<div className="absolute bottom-4 right-4">
-				<div className="flex items-center gap-1.5 bg-claude-surface/90 backdrop-blur-sm border border-claude-border rounded-lg px-3 py-1.5 text-xs text-claude-muted">
-					<span className="text-claude-accent">✦</span>
-					Performance
-					<span className="text-[10px]">▴</span>
-				</div>
-			</div>
 		</div>
 	);
 }

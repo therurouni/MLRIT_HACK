@@ -21,6 +21,7 @@ import ActivityBar from "./components/ActivityBar";
 import FileDetailsPanel, { type ClusterSelection } from "./components/FileDetailsPanel";
 import SettingsDrawer from "./components/SettingsDrawer";
 import GapAnalysisPanel from "./components/GapAnalysisPanel";
+import HandTracker from "./components/HandTracker";
 
 const CLUSTER_COLORS = [
 	"#D97757",
@@ -73,6 +74,9 @@ export default function App() {
 
 	// Gap Analysis modal
 	const [gapAnalysisOpen, setGapAnalysisOpen] = useState(false);
+
+	// Hand tracking
+	const [handTrackingEnabled, setHandTrackingEnabled] = useState(false);
 
 	// Search
 	const [searchQuery, setSearchQuery] = useState("");
@@ -346,6 +350,12 @@ export default function App() {
 					</div>
 				</div>
 			)}
+
+			{/* Hand Tracking */}
+			<HandTracker
+				enabled={handTrackingEnabled}
+				onToggle={() => setHandTrackingEnabled((prev) => !prev)}
+			/>
 
 			{/* Settings Drawer */}
 			<SettingsDrawer
