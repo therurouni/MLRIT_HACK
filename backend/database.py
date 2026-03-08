@@ -319,6 +319,52 @@ async def save_chat_message(role: str, content: str, context_files: list[str] | 
         await db.close()
 
 
+async def keyword_search_files(query: str, k: int = 20) -> list[dict]:
+    """
+    Keyword search across filenames and content previews using SQLite LIKE.
+    Returns files scored by keyword relevance.
+    """
+    db = await get_db()
+    try:
+        keywords = [kw.strip().lower() for kw in query.split() if kw.strip()]
+        if not keywords:
+            return []
+
+        conditions = []
+        params = []
+        for kw in keywords:
+            conditions.append(
+                "(LOWER(filename) LIKE ? OR LOWER(COALESCE(content_preview, '')) LIKE ? OR LOWER(COALESCE(extension, '')) LIKE ?)"
+            )
+            params.extend([f"%{kw}%", f"%{kw}%", f"%{kw}%"])
+
+        where_clause = " OR ".join(conditions)
+        cursor = await db.execute(
+            f"SELECT * FROM files WHERE {where_clause} LIMIT ?",
+            (*params, k * 2),
+        )
+        rows = await cursor.fetchall()
+        results = []
+        for row in rows:
+            file_dict = dict(row)
+            score = 0.0
+            fname_lower = (file_dict.get("filename") or "").lower()
+            preview_lower = (file_dict.get("content_preview") or "").lower()
+            for kw in keywords:
+                if kw in fname_lower:
+                    score += 0.4
+                if kw in preview_lower:
+                    count = preview_lower.count(kw)
+                    score += min(0.3, 0.1 * count)
+            file_dict["keyword_score"] = min(1.0, score / max(len(keywords) * 0.5, 1))
+            results.append(file_dict)
+
+        results.sort(key=lambda x: x["keyword_score"], reverse=True)
+        return results[:k]
+    finally:
+        await db.close()
+
+
 async def get_chat_history(limit: int = 50) -> list[dict]:
     """Get recent chat messages."""
     db = await get_db()

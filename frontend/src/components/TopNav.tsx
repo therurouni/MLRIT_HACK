@@ -83,26 +83,17 @@ export default function TopNav({
 				))}
 			</div>
 
-			{/* Search bar */}
+			{/* Search bar — clickable to open modal */}
 			<div className="flex-1 max-w-md mx-4">
-				<div className="relative">
-					<span className="absolute left-3 top-1/2 -translate-y-1/2 text-claude-muted text-xs">
-						Q
+				<button
+					onClick={onSearchSubmit}
+					className="w-full flex items-center px-3 py-1.5 text-xs bg-claude-bg border border-claude-border rounded-lg text-claude-muted hover:border-claude-accent/50 transition-colors text-left">
+					<span className="mr-2">Q</span>
+					<span className="flex-1">Search files semantically...</span>
+					<span className="text-[10px] border border-claude-border rounded px-1 ml-2">
+						Ctrl+K
 					</span>
-					<input
-						type="text"
-						value={searchQuery}
-						onChange={(e) => onSearchChange(e.target.value)}
-						onKeyDown={(e) => {
-							if (e.key === "Enter") onSearchSubmit();
-						}}
-						placeholder="Search files semantically..."
-						className="w-full pl-8 pr-10 py-1.5 text-xs bg-claude-bg border border-claude-border rounded-lg text-claude-text placeholder-claude-muted focus:outline-none focus:border-claude-accent"
-					/>
-					<span className="absolute right-3 top-1/2 -translate-y-1/2 text-claude-muted text-[10px] border border-claude-border rounded px-1">
-						⌘K
-					</span>
-				</div>
+				</button>
 			</div>
 
 			{/* Stats */}

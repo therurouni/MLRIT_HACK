@@ -14,6 +14,7 @@ import FileList from "./components/FileList";
 import ForceGraph from "./components/ForceGraph";
 import UmapView from "./components/UmapView";
 import SearchBar from "./components/SearchBar";
+import SearchModal from "./components/SearchModal";
 import ChatPanel from "./components/ChatPanel";
 import ActivityBar from "./components/ActivityBar";
 import FileDetailsPanel, { type ClusterSelection } from "./components/FileDetailsPanel";
@@ -70,6 +71,19 @@ export default function App() {
 
 	// Search
 	const [searchQuery, setSearchQuery] = useState("");
+	const [searchModalOpen, setSearchModalOpen] = useState(false);
+
+	// Cmd+K / Ctrl+K to open search modal
+	useEffect(() => {
+		const handleKey = (e: KeyboardEvent) => {
+			if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+				e.preventDefault();
+				setSearchModalOpen((prev) => !prev);
+			}
+		};
+		window.addEventListener("keydown", handleKey);
+		return () => window.removeEventListener("keydown", handleKey);
+	}, []);
 
 	const loadFiles = useCallback(async () => {
 		try {
@@ -214,9 +228,7 @@ export default function App() {
 	};
 
 	const handleSearchSubmit = () => {
-		if (searchQuery.trim()) {
-			setActiveTab("search");
-		}
+		setSearchModalOpen(true);
 	};
 
 	return (
@@ -288,6 +300,12 @@ export default function App() {
 
 			{/* Activity Bar */}
 			<ActivityBar events={events} connected={connected} />
+
+			{/* Search Modal */}
+			<SearchModal
+				open={searchModalOpen}
+				onClose={() => setSearchModalOpen(false)}
+			/>
 
 			{/* Settings Drawer */}
 			<SettingsDrawer
