@@ -274,6 +274,3 @@ chat_history(id, role, content, context_files, created_at)
 
 ---
 
-## License
-
-MIT
