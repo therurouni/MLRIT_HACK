@@ -53,6 +53,7 @@ async def semantic_search(req: SearchRequest):
                             "extension": file_rec.get("extension", ""),
                             "content_preview": file_rec.get("content_preview", "")[:300],
                             "cluster_name": file_rec.get("cluster_name", ""),
+                            "cluster_id": file_rec.get("cluster_id"),
                             "semantic_score": float(score),
                             "keyword_score": 0.0,
                         }
@@ -71,6 +72,7 @@ async def semantic_search(req: SearchRequest):
                 "extension": file_rec.get("extension", ""),
                 "content_preview": (file_rec.get("content_preview") or "")[:300],
                 "cluster_name": file_rec.get("cluster_name", ""),
+                "cluster_id": file_rec.get("cluster_id"),
                 "semantic_score": 0.0,
                 "keyword_score": file_rec.get("keyword_score", 0.0),
             }

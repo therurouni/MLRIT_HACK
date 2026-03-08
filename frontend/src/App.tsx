@@ -332,6 +332,11 @@ export default function App() {
 			<SearchModal
 				open={searchModalOpen}
 				onClose={() => setSearchModalOpen(false)}
+				onFileSelect={(fid, cid) => {
+					setSelectedFileId(fid);
+					setSelectedClusterId(cid);
+					setClusterSelection(null);
+				}}
 			/>
 
 			{/* Gap Analysis Modal */}

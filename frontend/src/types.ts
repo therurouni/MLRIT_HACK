@@ -65,6 +65,7 @@ export interface SearchResult {
 	extension: string;
 	content_preview: string;
 	cluster_name: string;
+	cluster_id: number | null;
 	score: number;
 }
 

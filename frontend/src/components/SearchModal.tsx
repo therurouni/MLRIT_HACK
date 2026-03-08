@@ -29,9 +29,10 @@ function getExtLabel(ext: string): string {
 interface SearchModalProps {
 	open: boolean;
 	onClose: () => void;
+	onFileSelect?: (fileId: number, clusterId: number) => void;
 }
 
-export default function SearchModal({ open, onClose }: SearchModalProps) {
+export default function SearchModal({ open, onClose, onFileSelect }: SearchModalProps) {
 	const [query, setQuery] = useState("");
 	const [results, setResults] = useState<SearchResult[]>([]);
 	const [loading, setLoading] = useState(false);
@@ -194,6 +195,12 @@ export default function SearchModal({ open, onClose }: SearchModalProps) {
 							results.map((r, i) => (
 								<div
 									key={r.file_id}
+									onClick={() => {
+										if (onFileSelect) {
+											onFileSelect(r.file_id, r.cluster_id ?? 0);
+										}
+										onClose();
+									}}
 									className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0">
 									{/* Cluster dot */}
 									<span

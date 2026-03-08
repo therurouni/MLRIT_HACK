@@ -172,15 +172,35 @@ export default function ForceGraph({ onNodeClick, onClusterClick, selectedNodeId
 	}, []);
 
 	const handleFitView = useCallback(() => {
-		if (svgRef.current && zoomBehaviorRef.current) {
-			d3.select(svgRef.current)
-				.transition()
-				.duration(500)
-				.call(
-					zoomBehaviorRef.current.transform,
-					d3.zoomIdentity,
-				);
-		}
+		if (!svgRef.current || !zoomBehaviorRef.current) return;
+
+		const svgEl = svgRef.current;
+		const g = svgEl.querySelector("g");
+		if (!g) return;
+
+		const bbox = (g as SVGGElement).getBBox();
+		if (bbox.width === 0 || bbox.height === 0) return;
+
+		const fullWidth = svgEl.clientWidth;
+		const fullHeight = svgEl.clientHeight;
+		const padding = 40;
+
+		const scale = Math.min(
+			(fullWidth - padding * 2) / bbox.width,
+			(fullHeight - padding * 2) / bbox.height,
+			1.5,
+		);
+
+		const tx = fullWidth / 2 - (bbox.x + bbox.width / 2) * scale;
+		const ty = fullHeight / 2 - (bbox.y + bbox.height / 2) * scale;
+
+		d3.select(svgEl)
+			.transition()
+			.duration(500)
+			.call(
+				zoomBehaviorRef.current.transform,
+				d3.zoomIdentity.translate(tx, ty).scale(scale),
+			);
 	}, []);
 
 	useEffect(() => {
@@ -517,7 +537,8 @@ export default function ForceGraph({ onNodeClick, onClusterClick, selectedNodeId
 				<div className="border-t border-claude-border my-0.5" />
 				<button
 					onClick={handleFitView}
-					className="w-8 h-8 flex items-center justify-center text-claude-muted hover:text-claude-text hover:bg-claude-bg rounded transition-colors text-xs">
+					className="w-8 h-8 flex items-center justify-center text-claude-muted hover:text-claude-text hover:bg-claude-bg rounded transition-colors text-xs"
+					title="Focus Clusters">
 					⤢
 				</button>
 			</div>

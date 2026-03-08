@@ -151,7 +151,6 @@ export default function FileDetailsPanel({
 									<button
 										key={child.id}
 										onClick={() => {
-											handleOpenFile(child.id);
 											if (onFileSelect) {
 												onFileSelect(child.id, clusterSelection.clusterId);
 											}
@@ -292,7 +291,11 @@ export default function FileDetailsPanel({
 								{similar.map((s) => (
 									<button
 										key={s.file_id}
-										onClick={() => handleOpenFile(s.file_id)}
+										onClick={() => {
+											if (onFileSelect) {
+												onFileSelect(s.file_id, s.cluster_id ?? 0);
+											}
+										}}
 										className="w-full flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-claude-bg/50 transition-colors cursor-pointer text-left">
 										<span
 											className="w-2 h-2 rounded-full shrink-0"
