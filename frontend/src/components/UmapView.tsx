@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { getUmapData } from "../api";
-import type { UmapPoint } from "../types";
+import { getUmapData, getFileById, openFile } from "../api";
+import type { UmapPoint, FileRecord } from "../types";
 
 const CLUSTER_COLORS = [
 	"#D97757",
@@ -34,6 +34,8 @@ export default function UmapView() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [hoveredPoint, setHoveredPoint] = useState<UmapPoint | null>(null);
+	const [hoveredFileSummary, setHoveredFileSummary] = useState<string | null>(null);
+	const fetchTimeoutRef = useRef<number | null>(null);
 
 	const loadData = async () => {
 		setLoading(true);
@@ -50,6 +52,15 @@ export default function UmapView() {
 
 	useEffect(() => {
 		loadData();
+	}, []);
+
+	// Cleanup timeout on unmount
+	useEffect(() => {
+		return () => {
+			if (fetchTimeoutRef.current) {
+				clearTimeout(fetchTimeoutRef.current);
+			}
+		};
 	}, []);
 
 	const drawCanvas = () => {
@@ -154,7 +165,79 @@ export default function UmapView() {
 				closest = p;
 			}
 		}
+		
+		// Clear previous timeout
+		if (fetchTimeoutRef.current) {
+			clearTimeout(fetchTimeoutRef.current);
+		}
+		
 		setHoveredPoint(closest);
+		
+		// Fetch file details if hovering over a point
+		if (closest) {
+			fetchTimeoutRef.current = window.setTimeout(async () => {
+				try {
+					const fileData: FileRecord = await getFileById(closest.file_id);
+					const summary = fileData.content_preview || "No preview available";
+					const truncatedSummary = summary.length > 200 ? summary.substring(0, 200) + "..." : summary;
+					setHoveredFileSummary(truncatedSummary);
+				} catch (error) {
+					console.error("Failed to fetch file details:", error);
+					setHoveredFileSummary(null);
+				}
+			}, 200);
+		} else {
+			setHoveredFileSummary(null);
+		}
+	};
+
+	const handleCanvasClick = async (e: React.MouseEvent<HTMLCanvasElement>) => {
+		const canvas = canvasRef.current;
+		const container = containerRef.current;
+		if (!canvas || !container || points.length === 0) return;
+
+		const rect = canvas.getBoundingClientRect();
+		const mx = e.clientX - rect.left;
+		const my = e.clientY - rect.top;
+		const width = container.clientWidth;
+		const height = container.clientHeight;
+
+		const padding = 60;
+		const xs = points.map((p) => p.x);
+		const ys = points.map((p) => p.y);
+		const minX = Math.min(...xs);
+		const maxX = Math.max(...xs);
+		const minY = Math.min(...ys);
+		const maxY = Math.max(...ys);
+		const rangeX = maxX - minX || 1;
+		const rangeY = maxY - minY || 1;
+
+		const scaleX = (v: number) =>
+			padding + ((v - minX) / rangeX) * (width - 2 * padding);
+		const scaleY = (v: number) =>
+			padding + ((v - minY) / rangeY) * (height - 2 * padding);
+
+		// Find clicked point
+		let closest: UmapPoint | null = null;
+		let minDist = Infinity;
+		for (const p of points) {
+			const dx = scaleX(p.x) - mx;
+			const dy = scaleY(p.y) - my;
+			const dist = Math.sqrt(dx * dx + dy * dy);
+			if (dist < 20 && dist < minDist) {
+				minDist = dist;
+				closest = p;
+			}
+		}
+
+		// Open file if clicked
+		if (closest) {
+			try {
+				await openFile(closest.file_id);
+			} catch (error) {
+				console.error("Failed to open file:", error);
+			}
+		}
 	};
 
 	if (loading) {
@@ -211,7 +294,8 @@ export default function UmapView() {
 				<canvas
 					ref={canvasRef}
 					onMouseMove={handleMouseMove}
-					className="w-full h-full"
+					onClick={handleCanvasClick}
+					className="w-full h-full cursor-pointer"
 				/>
 			</div>
 
@@ -248,14 +332,22 @@ export default function UmapView() {
 
 			{/* Hovered point tooltip */}
 			{hoveredPoint && (
-				<div className="absolute top-4 left-4 bg-claude-surface/90 backdrop-blur-sm border border-claude-border rounded-lg px-3 py-2">
-					<div className="text-sm font-semibold text-claude-text">
+				<div className="absolute top-4 left-4 bg-claude-surface/95 backdrop-blur-sm border border-claude-border rounded-lg px-3 py-2 max-w-[320px]">
+					<div className="text-sm font-semibold text-claude-text break-words">
 						{hoveredPoint.filename}
 					</div>
 					<div className="text-xs text-claude-muted mt-0.5">
 						Cluster:{" "}
 						{hoveredPoint.cluster_name ||
 							`#${hoveredPoint.cluster_label}`}
+					</div>
+					{hoveredFileSummary && (
+						<div className="text-xs text-claude-muted mt-2 pt-2 border-t border-claude-border leading-relaxed">
+							{hoveredFileSummary}
+						</div>
+					)}
+					<div className="mt-2 pt-2 border-t border-claude-border text-[10px] text-claude-muted">
+						Click to open file
 					</div>
 				</div>
 			)}

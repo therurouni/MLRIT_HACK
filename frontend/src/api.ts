@@ -100,6 +100,15 @@ export async function getSimilarFiles(fileId: number, k: number = 5) {
 	);
 }
 
+export async function openFile(fileId: number) {
+	return fetchJSON<{ status: string; file_id: number; path: string }>(
+		`/api/files/${fileId}/open`,
+		{
+			method: "POST",
+		},
+	);
+}
+
 // ─── Search ──────────────────────────────────────────────────────────────────
 
 export async function semanticSearch(query: string, k: number = 10) {

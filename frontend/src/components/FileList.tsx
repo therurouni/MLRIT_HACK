@@ -1,4 +1,5 @@
 import type { FileRecord } from "../types";
+import { openFile } from "../api";
 
 interface FileListProps {
 	files: FileRecord[];
@@ -40,6 +41,14 @@ function getClusterColor(clusterId: number | null): string {
 }
 
 export default function FileList({ files }: FileListProps) {
+	const handleFileClick = async (fileId: number) => {
+		try {
+			await openFile(fileId);
+		} catch (error) {
+			console.error("Failed to open file:", error);
+		}
+	};
+
 	if (files.length === 0) {
 		return (
 			<div className="flex flex-col items-center justify-center h-full text-claude-muted">
@@ -80,9 +89,12 @@ export default function FileList({ files }: FileListProps) {
 										<span className="text-base text-claude-muted">
 											{file.faiss_id !== null ? "*" : "~"}
 										</span>
-										<span className="truncate max-w-xs" title={file.path}>
+										<button
+											onClick={() => handleFileClick(file.id)}
+											className="truncate max-w-xs text-left hover:text-claude-accent hover:underline cursor-pointer transition-colors"
+											title={`${file.path} (click to open)`}>
 											{file.filename}
-										</span>
+										</button>
 									</div>
 								</td>
 								<td className="py-2 pr-4 text-claude-muted">

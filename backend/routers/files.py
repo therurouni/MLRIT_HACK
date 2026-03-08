@@ -205,3 +205,33 @@ async def get_similar_files(file_id: int, k: int = 5):
             })
 
     return {"similar": similar[:k], "file_id": file_id}
+
+
+@router.post("/{file_id}/open")
+async def open_file_in_system(file_id: int):
+    """Open a file in the system's default application."""
+    import platform
+    import subprocess
+
+    file_rec = await db.get_file_by_id(file_id)
+    if not file_rec:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    file_path = file_rec.get("path")
+    if not file_path:
+        raise HTTPException(status_code=400, detail="File path not available")
+
+    try:
+        system = platform.system()
+        if system == "Windows":
+            # Use start command on Windows
+            subprocess.Popen(["cmd", "/c", "start", "", file_path], shell=True)
+        elif system == "Darwin":  # macOS
+            subprocess.Popen(["open", file_path])
+        else:  # Linux and others
+            subprocess.Popen(["xdg-open", file_path])
+        
+        return {"status": "opened", "file_id": file_id, "path": file_path}
+    except Exception as e:
+        logger.error(f"Failed to open file {file_path}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to open file: {str(e)}")

@@ -215,6 +215,17 @@ export default function App() {
 		setSelectedFileId(nodeId);
 		setSelectedClusterId(clusterId);
 		setClusterSelection(null); // switch to file mode
+		
+		// Open the file in system's default application
+		openFileInSystem(nodeId);
+	};
+
+	const openFileInSystem = async (fileId: number) => {
+		try {
+			await api.openFile(fileId);
+		} catch (error: any) {
+			console.error("Failed to open file:", error);
+		}
 	};
 
 	const handleClusterClick = (

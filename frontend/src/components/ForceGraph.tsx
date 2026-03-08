@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { getGraphData } from "../api";
+import { getGraphData, getFileById } from "../api";
 import * as d3 from "d3";
-import type { GraphNode, GraphLink, GraphData } from "../types";
+import type { GraphNode, GraphLink, GraphData, FileRecord } from "../types";
 
 // Warm color palette matching the reference image
 const CLUSTER_COLORS = [
@@ -57,6 +57,24 @@ export default function ForceGraph({ onNodeClick, onClusterClick, selectedNodeId
 	const [error, setError] = useState<string | null>(null);
 	const [zoomLevel, setZoomLevel] = useState(1);
 	const zoomBehaviorRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+	
+	// Tooltip state
+	const [tooltip, setTooltip] = useState<{
+		visible: boolean;
+		x: number;
+		y: number;
+		content: string;
+		title: string;
+		isCluster: boolean;
+	}>({
+		visible: false,
+		x: 0,
+		y: 0,
+		content: "",
+		title: "",
+		isCluster: false,
+	});
+	const tooltipTimeoutRef = useRef<number | null>(null);
 
 	const loadGraph = async () => {
 		setLoading(true);
@@ -71,8 +89,68 @@ export default function ForceGraph({ onNodeClick, onClusterClick, selectedNodeId
 		}
 	};
 
+	// Function to show tooltip
+	const showTooltip = async (event: any, d: SimNode) => {
+		// Clear any existing timeout
+		if (tooltipTimeoutRef.current) {
+			clearTimeout(tooltipTimeoutRef.current);
+		}
+
+		const rect = svgRef.current?.getBoundingClientRect();
+		if (!rect) return;
+
+		if (d.isCenter) {
+			// Show cluster summary
+			const centerNode = d as ClusterCenter;
+			setTooltip({
+				visible: true,
+				x: event.pageX - rect.left + 15,
+				y: event.pageY - rect.top + 15,
+				title: centerNode.cluster_name,
+				content: `Cluster containing ${centerNode.fileCount} file${centerNode.fileCount !== 1 ? 's' : ''}`,
+				isCluster: true,
+			});
+		} else {
+			// Show file summary - fetch file details
+			const fileNode = d as GraphNode;
+			try {
+				const fileData: FileRecord = await getFileById(fileNode.id);
+				const summary = fileData.content_preview || "No preview available";
+				const truncatedSummary = summary.length > 300 ? summary.substring(0, 300) + "..." : summary;
+				
+				setTooltip({
+					visible: true,
+					x: event.pageX - rect.left + 15,
+					y: event.pageY - rect.top + 15,
+					title: fileNode.label,
+					content: truncatedSummary,
+					isCluster: false,
+				});
+			} catch (error) {
+				console.error("Failed to fetch file details:", error);
+			}
+		}
+	};
+
+	// Function to hide tooltip
+	const hideTooltip = () => {
+		// Delay hiding to prevent flickering
+		tooltipTimeoutRef.current = window.setTimeout(() => {
+			setTooltip((prev) => ({ ...prev, visible: false }));
+		}, 100);
+	};
+
 	useEffect(() => {
 		loadGraph();
+	}, []);
+
+	// Cleanup timeout on unmount
+	useEffect(() => {
+		return () => {
+			if (tooltipTimeoutRef.current) {
+				clearTimeout(tooltipTimeoutRef.current);
+			}
+		};
 	}, []);
 
 	const handleZoomIn = useCallback(() => {
@@ -287,6 +365,9 @@ export default function ForceGraph({ onNodeClick, onClusterClick, selectedNodeId
 					.duration(150)
 					.attr("fill", "#F5F0EB")
 					.attr("font-weight", "bold");
+				
+				// Show tooltip
+				showTooltip(event, d);
 			})
 			.on("mouseout", function (event, d) {
 				d3.select(this)
@@ -301,6 +382,9 @@ export default function ForceGraph({ onNodeClick, onClusterClick, selectedNodeId
 					.duration(150)
 					.attr("fill", d.isCenter ? getColor(d.cluster_id) : "#A8A29E")
 					.attr("font-weight", d.isCenter ? "600" : "normal");
+				
+				// Hide tooltip
+				hideTooltip();
 			})
 			.on("click", (event, d) => {
 				if (d.isCenter && onClusterClick) {
@@ -328,7 +412,7 @@ export default function ForceGraph({ onNodeClick, onClusterClick, selectedNodeId
 		return () => {
 			simulation.stop();
 		};
-	}, [graphData, selectedNodeId, onNodeClick]);
+	}, [graphData, selectedNodeId, onNodeClick, onClusterClick]);
 
 	if (loading) {
 		return (
@@ -390,6 +474,33 @@ export default function ForceGraph({ onNodeClick, onClusterClick, selectedNodeId
 				height="100%"
 				className="bg-claude-bg"
 			/>
+
+			{/* Tooltip */}
+			{tooltip.visible && (
+				<div
+					className="absolute z-50 pointer-events-none"
+					style={{
+						left: `${tooltip.x}px`,
+						top: `${tooltip.y}px`,
+						transform: "translate(0, -100%)",
+						maxWidth: "320px",
+					}}
+				>
+					<div className="bg-claude-surface/95 backdrop-blur-sm border border-claude-border rounded-lg shadow-lg p-3">
+						<div className="text-sm font-semibold text-claude-text mb-1 break-words">
+							{tooltip.title}
+						</div>
+						<div className="text-xs text-claude-muted leading-relaxed break-words">
+							{tooltip.content}
+						</div>
+						{!tooltip.isCluster && (
+							<div className="mt-2 pt-2 border-t border-claude-border text-[10px] text-claude-muted">
+								Click to open file
+							</div>
+						)}
+					</div>
+				</div>
+			)}
 
 			{/* Zoom controls - right side */}
 			<div className="absolute top-4 right-4 flex flex-col gap-1 bg-claude-surface/90 backdrop-blur-sm border border-claude-border rounded-lg p-1">

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getFileById, getSimilarFiles } from "../api";
+import { getFileById, getSimilarFiles, openFile } from "../api";
 import type { FileRecord } from "../types";
 
 interface SimilarFile {
@@ -63,6 +63,14 @@ export default function FileDetailsPanel({
 	const [file, setFile] = useState<FileRecord | null>(null);
 	const [similar, setSimilar] = useState<SimilarFile[]>([]);
 	const [loading, setLoading] = useState(false);
+
+	const handleOpenFile = async (fileId: number) => {
+		try {
+			await openFile(fileId);
+		} catch (error) {
+			console.error("Failed to open file:", error);
+		}
+	};
 
 	useEffect(() => {
 		if (fileId === null) {
@@ -140,6 +148,7 @@ export default function FileDetailsPanel({
 									<button
 										key={child.id}
 										onClick={() => {
+											handleOpenFile(child.id);
 											if (onFileSelect) {
 												onFileSelect(child.id, clusterSelection.clusterId);
 											}
@@ -199,10 +208,13 @@ export default function FileDetailsPanel({
 								className={`w-10 h-10 ${extInfo.bg} rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0`}>
 								{extInfo.label}
 							</div>
-							<div className="min-w-0">
-								<h3 className="text-sm font-semibold text-claude-text truncate">
+							<div className="min-w-0 flex-1">
+								<button
+									onClick={() => handleOpenFile(file.id)}
+									className="text-sm font-semibold text-claude-text hover:text-claude-accent truncate block w-full text-left transition-colors"
+									title="Click to open file">
 									{file.filename}
-								</h3>
+								</button>
 								<p className="text-[11px] text-claude-muted mt-0.5">
 									{file.extension?.toUpperCase().replace(".", "") || "FILE"} • ID: {file.id}
 								</p>
@@ -255,14 +267,15 @@ export default function FileDetailsPanel({
 							</div>
 							<div className="space-y-1.5">
 								{similar.map((s) => (
-									<div
+									<button
 										key={s.file_id}
-										className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-claude-bg/50 transition-colors">
+										onClick={() => handleOpenFile(s.file_id)}
+										className="w-full flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-claude-bg/50 transition-colors cursor-pointer text-left">
 										<span
 											className="w-2 h-2 rounded-full shrink-0"
 											style={{ backgroundColor: clusterColor }}
 										/>
-										<span className="text-xs text-claude-text truncate flex-1">
+										<span className="text-xs text-claude-text hover:text-claude-accent truncate flex-1 transition-colors">
 											{s.filename}
 										</span>
 										<span
@@ -270,7 +283,7 @@ export default function FileDetailsPanel({
 											style={{ color: clusterColor }}>
 											{Math.round(s.score * 100)}%
 										</span>
-									</div>
+									</button>
 								))}
 							</div>
 						</div>
@@ -282,15 +295,20 @@ export default function FileDetailsPanel({
 				</div>
 			)}
 
-			{/* Copy Path button */}
+			{/* Action buttons */}
 			{file && (
-				<div className="p-4 border-t border-claude-border">
+				<div className="p-4 border-t border-claude-border space-y-2">
 					<button
 						className="w-full py-2 text-sm font-medium rounded-lg transition-colors"
 						style={{
 							backgroundColor: clusterColor + "cc",
 							color: "white",
 						}}
+						onClick={() => handleOpenFile(file.id)}>
+						📂 Open File
+					</button>
+					<button
+						className="w-full py-2 text-sm font-medium rounded-lg transition-colors bg-claude-bg hover:bg-claude-border text-claude-text"
 						onClick={() => {
 							navigator.clipboard.writeText(file.path);
 						}}>
