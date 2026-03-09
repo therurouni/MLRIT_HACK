@@ -140,11 +140,11 @@ export default function CinematicIntro({ onComplete }: CinematicIntroProps) {
             {/* ── Preloader ────────────────────────────────── */}
             <div
                 className={`fixed inset-0 z-[1000] flex flex-col items-center justify-center gap-7 transition-all duration-700 ${ready ? "opacity-0 pointer-events-none" : "opacity-100"}`}
-                style={{ background: "#1C1917" }}
+                style={{ background: "var(--claude-bg)" }}
             >
                 <div
                     className="font-mono text-[11px] font-light tracking-[4px] uppercase"
-                    style={{ color: "#A8A29E" }}
+                    style={{ color: "var(--claude-text-2)" }}
                 >
                     Loading Experience
                 </div>
@@ -168,7 +168,7 @@ export default function CinematicIntro({ onComplete }: CinematicIntroProps) {
                 </div>
                 <div
                     className="font-mono text-[13px] font-light tracking-[2px]"
-                    style={{ color: "#F5F0EB" }}
+                    style={{ color: "var(--claude-text)" }}
                 >
                     {loadProgress} %
                 </div>
@@ -214,11 +214,11 @@ export default function CinematicIntro({ onComplete }: CinematicIntroProps) {
                 <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[95] flex flex-col items-center gap-2 animate-pulse">
                     <div
                         className="w-px h-9"
-                        style={{ background: "#A8A29E" }}
+                        style={{ background: "var(--claude-text-2)" }}
                     />
                     <span
                         className="font-mono text-[10px] tracking-[3px] uppercase"
-                        style={{ color: "#A8A29E" }}
+                        style={{ color: "var(--claude-text-2)" }}
                     >
                         Scroll
                     </span>
@@ -228,11 +228,11 @@ export default function CinematicIntro({ onComplete }: CinematicIntroProps) {
             {/* ── CTA section ──────────────────────────────── */}
             <section
                 className={`relative z-50 min-h-screen flex flex-col items-center justify-center text-center px-6 py-16 transition-all duration-[1200ms] ${showCta ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
-                style={{ background: "#1C1917" }}
+                style={{ background: "var(--claude-bg)" }}
             >
                 <div
                     className="font-mono text-[11px] font-light tracking-[5px] uppercase mb-7"
-                    style={{ color: "#A8A29E" }}
+                    style={{ color: "var(--claude-text-2)" }}
                 >
                     Welcome to SEFS
                 </div>
@@ -240,7 +240,7 @@ export default function CinematicIntro({ onComplete }: CinematicIntroProps) {
                     className="font-serif font-bold leading-[1.1] mb-12"
                     style={{
                         fontSize: "clamp(2.4rem, 7vw, 5.5rem)",
-                        color: "#F5F0EB",
+                        color: "var(--claude-text)",
                         maxWidth: "800px",
                     }}
                 >
@@ -256,8 +256,8 @@ export default function CinematicIntro({ onComplete }: CinematicIntroProps) {
                     }}
                     className="inline-flex items-center gap-2.5 font-mono text-[13px] font-normal tracking-[2px] uppercase px-10 py-3.5 rounded-full border cursor-pointer transition-all duration-400 group"
                     style={{
-                        color: "#F5F0EB",
-                        borderColor: "#D97757",
+                        color: "var(--claude-text)",
+                        borderColor: "var(--claude-accent)",
                         background: "transparent",
                     }}
                     onMouseEnter={(e) => {

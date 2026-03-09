@@ -3,6 +3,7 @@ import * as d3 from "d3";
 import { Delaunay } from "d3-delaunay";
 import { getGraphData, getFiles } from "../api";
 import type { FileRecord } from "../types";
+import { getThemeColors } from "../theme";
 
 // ─── Color palette (matches app theme) ───────────────────────────────────────
 const CLUSTER_COLORS = [
@@ -113,10 +114,10 @@ export default function SpatialView({ onNodeClick, searchQuery }: Props) {
 		svg.selectAll("*").remove();
 		svg.attr("width", width).attr("height", height);
 
-		// Dark theme colors (app is dark-only)
-		const bg = "#1C1917";
-		const textColor = "#A8A29E";
-		const borderColor = "rgba(68,64,60,0.6)";
+		const theme = getThemeColors();
+		const bg = theme.bg;
+		const textColor = theme.text2;
+		const borderColor = theme.border;
 
 		// Single container group for zoom/pan
 		const containerG = svg.append("g").attr("class", "zoom-container");
@@ -282,7 +283,7 @@ export default function SpatialView({ onNodeClick, searchQuery }: Props) {
 			g.append("circle")
 				.attr("r", 5)
 				.attr("fill", color)
-				.attr("stroke", "#1C1917")
+				.attr("stroke", bg)
 				.attr("stroke-width", 1.5);
 
 			// Filename label with background pill

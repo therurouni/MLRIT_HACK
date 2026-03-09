@@ -81,6 +81,24 @@ export default function App() {
 	// Hand tracking
 	const [handTrackingEnabled, setHandTrackingEnabled] = useState(false);
 
+	// Theme
+	const [theme, setTheme] = useState<"dark" | "light">(() => {
+		const saved = localStorage.getItem("sefs-theme");
+		return saved === "light" ? "light" : "dark";
+	});
+
+	useEffect(() => {
+		const root = document.documentElement;
+		if (theme === "light") {
+			root.classList.add("light");
+		} else {
+			root.classList.remove("light");
+		}
+		localStorage.setItem("sefs-theme", theme);
+	}, [theme]);
+
+	const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+
 	// Search
 	const [searchQuery, setSearchQuery] = useState("");
 	const [searchModalOpen, setSearchModalOpen] = useState(false);
@@ -274,6 +292,8 @@ export default function App() {
 				onSearchChange={setSearchQuery}
 				onSearchSubmit={handleSearchSubmit}
 				onSettingsClick={() => setSettingsOpen(true)}
+				theme={theme}
+				onThemeToggle={toggleTheme}
 			/>
 
 			{/* Main content area */}

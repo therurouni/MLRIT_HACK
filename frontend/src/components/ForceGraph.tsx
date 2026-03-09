@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { getGraphData, getFileById } from "../api";
 import * as d3 from "d3";
 import type { GraphNode, GraphLink, GraphData, FileRecord } from "../types";
+import { getThemeColors } from "../theme";
 
 // Warm color palette matching the reference image
 const CLUSTER_COLORS = [
@@ -354,7 +355,7 @@ export default function ForceGraph({ onNodeClick, onClusterClick, selectedNodeId
 			.attr("font-weight", "600")
 			.attr("fill", (d) => getColor(d.cluster_id))
 			.attr("paint-order", "stroke")
-			.attr("stroke", "#1C1917")
+			.attr("stroke", getThemeColors().bg)
 			.attr("stroke-width", 3);
 
 		// Labels for file nodes
@@ -365,9 +366,9 @@ export default function ForceGraph({ onNodeClick, onClusterClick, selectedNodeId
 			.attr("dx", 12)
 			.attr("dy", 4)
 			.attr("font-size", 10)
-			.attr("fill", "#A8A29E")
+			.attr("fill", getThemeColors().text2)
 			.attr("paint-order", "stroke")
-			.attr("stroke", "#1C1917")
+			.attr("stroke", getThemeColors().bg)
 			.attr("stroke-width", 2);
 
 		// Hover effects
@@ -383,7 +384,7 @@ export default function ForceGraph({ onNodeClick, onClusterClick, selectedNodeId
 					.select("text")
 					.transition()
 					.duration(150)
-					.attr("fill", "#F5F0EB")
+					.attr("fill", getThemeColors().text)
 					.attr("font-weight", "bold");
 				
 				// Show tooltip
@@ -400,7 +401,7 @@ export default function ForceGraph({ onNodeClick, onClusterClick, selectedNodeId
 					.select("text")
 					.transition()
 					.duration(150)
-					.attr("fill", d.isCenter ? getColor(d.cluster_id) : "#A8A29E")
+					.attr("fill", d.isCenter ? getColor(d.cluster_id) : getThemeColors().text2)
 					.attr("font-weight", d.isCenter ? "600" : "normal");
 				
 				// Hide tooltip
