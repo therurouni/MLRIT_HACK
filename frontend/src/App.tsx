@@ -7,6 +7,7 @@ import {
 	recluster,
 	basicOrganize,
 	getClusters,
+	openFile,
 } from "./api";
 import { useWebSocket } from "./hooks/useWebSocket";
 import TopNav from "./components/TopNav";
@@ -158,6 +159,7 @@ export default function App() {
 			"files_organized",
 			"basic_organize_complete",
 			"organizing_complete",
+			"node_moved",
 		];
 		if (refreshEvents.includes(t)) {
 			loadFiles();
@@ -212,6 +214,14 @@ export default function App() {
 			setGraphKey(graphKeyRef.current);
 			setUmapKey(umapKeyRef.current);
 			setTimelineKey(timelineKeyRef.current);
+		} else if (t === "node_moved") {
+			// Refresh graph views when a node is moved between clusters
+			graphKeyRef.current += 1;
+			umapKeyRef.current += 1;
+			timelineKeyRef.current += 1;
+			setGraphKey(graphKeyRef.current);
+			setUmapKey(umapKeyRef.current);
+			setTimelineKey(timelineKeyRef.current);
 		} else if (t === "scan_error" || t === "clustering_error") {
 			setProcessing(false);
 			setProcessingStatus("");
@@ -256,7 +266,7 @@ export default function App() {
 
 	const openFileInSystem = async (fileId: number) => {
 		try {
-			await api.openFile(fileId);
+			await openFile(fileId);
 		} catch (error: any) {
 			console.error("Failed to open file:", error);
 		}
@@ -354,6 +364,17 @@ export default function App() {
 							setClusterSelection(null);
 						}}
 						onGapAnalysis={() => setGapAnalysisOpen(true)}
+						onNodeMoved={() => {
+							loadFiles();
+							loadHealth();
+							loadClusters();
+							graphKeyRef.current += 1;
+							umapKeyRef.current += 1;
+							timelineKeyRef.current += 1;
+							setGraphKey(graphKeyRef.current);
+							setUmapKey(umapKeyRef.current);
+							setTimelineKey(timelineKeyRef.current);
+						}}
 					/>
 				)}
 			</div>

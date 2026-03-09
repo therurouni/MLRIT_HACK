@@ -10,6 +10,8 @@ from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 import backend.config as config
 from backend.config import CORS_ORIGINS
@@ -160,3 +162,21 @@ async def get_events(limit: int = 50):
     """Get recent events."""
     events = await get_recent_events(limit=limit)
     return {"events": events}
+
+
+# ─── Serve frontend static files ─────────────────────────────────────────────
+
+_FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+
+if _FRONTEND_DIST.is_dir():
+    # Serve built assets (JS, CSS, etc.)
+    app.mount("/assets", StaticFiles(directory=str(_FRONTEND_DIST / "assets")), name="static-assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        """Catch-all: serve the SPA index.html for any non-API route."""
+        # Try serving a specific file first
+        file_path = _FRONTEND_DIST / full_path
+        if full_path and file_path.is_file() and file_path.resolve().is_relative_to(_FRONTEND_DIST.resolve()):
+            return FileResponse(str(file_path))
+        return FileResponse(str(_FRONTEND_DIST / "index.html"))

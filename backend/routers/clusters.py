@@ -3,15 +3,18 @@ SEFS Clusters Router — clustering, graph data, UMAP projections, and file orga
 """
 
 import logging
-from fastapi import APIRouter, BackgroundTasks
+import shutil
+from pathlib import Path
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 
 from backend import database as db
 from backend.clustering import cluster_files
 from backend.cluster_namer import name_all_clusters
-from backend.file_organizer import organize_files
+from backend.file_organizer import organize_files, _cleanup_empty_dirs
 from backend.websocket import ws_manager
+import backend.config as config
 
 logger = logging.getLogger("sefs.routers.clusters")
 router = APIRouter(prefix="/api/clusters", tags=["clusters"])
@@ -23,6 +26,11 @@ _latest_cluster_data: Optional[dict] = None
 class ReclusterRequest(BaseModel):
     organize: bool = False  # Whether to physically move files after clustering
     semantic_organize: bool = False  # If true, organize into a -semantic replica folder
+
+
+class MoveNodeRequest(BaseModel):
+    file_id: int
+    target_cluster_label: int  # The cluster label to move the file into
 
 
 @router.get("")
@@ -223,6 +231,150 @@ async def organize(background_tasks: BackgroundTasks):
 
     background_tasks.add_task(organize_files, _latest_cluster_data)
     return {"status": "organizing_started"}
+
+
+@router.post("/move-node")
+async def move_node(req: MoveNodeRequest):
+    """
+    Move a file (node) from its current cluster to a different cluster.
+    - Updates DB cluster assignment
+    - Moves the actual file on disk (in sefs-root-semantic folder if it exists)
+    - If the source cluster becomes empty, removes it from DB and deletes its folder
+    """
+    # 1. Get the file
+    file_record = await db.get_file_by_id(req.file_id)
+    if not file_record:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    old_cluster_id = file_record.get("cluster_id")
+
+    # 2. Get the target cluster
+    target_cluster = await db.get_cluster_by_label(req.target_cluster_label)
+    if not target_cluster:
+        raise HTTPException(status_code=404, detail="Target cluster not found")
+
+    # Don't move if already in the target cluster
+    if old_cluster_id == req.target_cluster_label:
+        return {"status": "no_change", "message": "File is already in the target cluster"}
+
+    target_cluster_name = target_cluster["name"]
+
+    # 3. Update DB: file cluster assignment
+    await db.update_file_cluster(req.file_id, req.target_cluster_label, target_cluster_name)
+
+    # 4. Move the actual file on disk
+    src_path = Path(file_record["path"])
+    moved_on_disk = False
+
+    if src_path.exists():
+        # Determine the target folder from the target cluster's folder_path
+        # or construct it from the semantic root
+        target_folder = None
+
+        if target_cluster.get("folder_path"):
+            target_folder = Path(target_cluster["folder_path"])
+        else:
+            # Try sefs-root-semantic folder
+            semantic_root = config.SEFS_ROOT.parent / f"{config.SEFS_ROOT.name}-semantic"
+            if semantic_root.exists():
+                target_folder = semantic_root / target_cluster_name
+            else:
+                # Use main sefs root
+                target_folder = config.SEFS_ROOT / target_cluster_name
+
+        if target_folder:
+            target_folder.mkdir(parents=True, exist_ok=True)
+            dest = target_folder / src_path.name
+
+            # Handle name collisions
+            if dest.exists() and dest != src_path:
+                stem = src_path.stem
+                suffix = src_path.suffix
+                counter = 1
+                while dest.exists():
+                    dest = target_folder / f"{stem}_{counter}{suffix}"
+                    counter += 1
+
+            try:
+                shutil.move(str(src_path), str(dest))
+                await db.update_file_path(
+                    old_path=str(src_path),
+                    new_path=str(dest),
+                    new_filename=dest.name,
+                )
+                moved_on_disk = True
+                logger.info(f"Moved file on disk: {src_path} -> {dest}")
+            except Exception as e:
+                logger.error(f"Failed to move file on disk: {e}")
+                # DB is already updated, log the error but continue
+
+    # 5. Update target cluster file count
+    target_files = await db.get_files_by_cluster(req.target_cluster_label)
+    await db.update_cluster_file_count(req.target_cluster_label, len(target_files))
+
+    # 6. Handle source cluster: check if it's now empty
+    source_cluster_removed = False
+    if old_cluster_id is not None and old_cluster_id >= 0:
+        source_files = await db.get_files_by_cluster(old_cluster_id)
+        if len(source_files) == 0:
+            # Cluster is empty — remove it
+            source_cluster = await db.get_cluster_by_label(old_cluster_id)
+            if source_cluster:
+                # Delete the empty cluster folder on disk
+                if source_cluster.get("folder_path"):
+                    folder = Path(source_cluster["folder_path"])
+                    if folder.exists() and folder.is_dir():
+                        try:
+                            # Only remove if truly empty
+                            remaining = list(folder.iterdir())
+                            if not remaining:
+                                folder.rmdir()
+                                logger.info(f"Removed empty cluster folder: {folder}")
+                        except OSError as e:
+                            logger.warning(f"Could not remove cluster folder {folder}: {e}")
+
+                await db.delete_cluster(old_cluster_id)
+                source_cluster_removed = True
+                logger.info(f"Removed empty cluster: label={old_cluster_id}")
+        else:
+            # Update file count for the source cluster
+            await db.update_cluster_file_count(old_cluster_id, len(source_files))
+
+    # 7. Clean up any empty directories in both roots
+    _cleanup_empty_dirs(config.SEFS_ROOT)
+    semantic_root = config.SEFS_ROOT.parent / f"{config.SEFS_ROOT.name}-semantic"
+    if semantic_root.exists():
+        _cleanup_empty_dirs(semantic_root)
+
+    # 8. Log event and broadcast
+    await db.log_event("node_moved", {
+        "file_id": req.file_id,
+        "filename": file_record["filename"],
+        "from_cluster": old_cluster_id,
+        "to_cluster": req.target_cluster_label,
+        "to_cluster_name": target_cluster_name,
+        "source_cluster_removed": source_cluster_removed,
+    })
+    await ws_manager.broadcast("node_moved", {
+        "file_id": req.file_id,
+        "filename": file_record["filename"],
+        "from_cluster": old_cluster_id,
+        "to_cluster": req.target_cluster_label,
+        "to_cluster_name": target_cluster_name,
+        "source_cluster_removed": source_cluster_removed,
+        "moved_on_disk": moved_on_disk,
+    })
+
+    return {
+        "status": "success",
+        "file_id": req.file_id,
+        "filename": file_record["filename"],
+        "from_cluster": old_cluster_id,
+        "to_cluster": req.target_cluster_label,
+        "to_cluster_name": target_cluster_name,
+        "source_cluster_removed": source_cluster_removed,
+        "moved_on_disk": moved_on_disk,
+    }
 
 
 @router.get("/gap-analysis")

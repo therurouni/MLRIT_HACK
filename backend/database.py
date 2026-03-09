@@ -272,6 +272,53 @@ async def get_all_clusters() -> list[dict]:
         await db.close()
 
 
+async def get_cluster_by_label(label: int) -> Optional[dict]:
+    """Get a single cluster by its label."""
+    db = await get_db()
+    try:
+        cursor = await db.execute("SELECT * FROM clusters WHERE label = ?", (label,))
+        row = await cursor.fetchone()
+        return dict(row) if row else None
+    finally:
+        await db.close()
+
+
+async def get_files_by_cluster(cluster_id: int) -> list[dict]:
+    """Get all files belonging to a specific cluster."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT * FROM files WHERE cluster_id = ?", (cluster_id,)
+        )
+        rows = await cursor.fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        await db.close()
+
+
+async def delete_cluster(label: int) -> None:
+    """Delete a cluster by label."""
+    db = await get_db()
+    try:
+        await db.execute("DELETE FROM clusters WHERE label = ?", (label,))
+        await db.commit()
+    finally:
+        await db.close()
+
+
+async def update_cluster_file_count(label: int, file_count: int) -> None:
+    """Update the file_count for a cluster."""
+    db = await get_db()
+    try:
+        await db.execute(
+            "UPDATE clusters SET file_count = ?, updated_at = ? WHERE label = ?",
+            (file_count, time.time(), label),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+
+
 async def clear_clusters() -> None:
     """Clear all cluster assignments."""
     db = await get_db()

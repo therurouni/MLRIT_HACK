@@ -102,6 +102,25 @@ export async function organizeFiles() {
 	});
 }
 
+export async function moveNode(fileId: number, targetClusterLabel: number) {
+	return fetchJSON<{
+		status: string;
+		file_id: number;
+		filename: string;
+		from_cluster: number | null;
+		to_cluster: number;
+		to_cluster_name: string;
+		source_cluster_removed: boolean;
+		moved_on_disk: boolean;
+	}>("/api/clusters/move-node", {
+		method: "POST",
+		body: JSON.stringify({
+			file_id: fileId,
+			target_cluster_label: targetClusterLabel,
+		}),
+	});
+}
+
 export async function getSimilarFiles(fileId: number, k: number = 5) {
 	return fetchJSON<{ similar: any[]; file_id: number }>(
 		`/api/files/${fileId}/similar?k=${k}`,

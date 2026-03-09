@@ -135,15 +135,6 @@ async def _run_scan(
 _scan_flags: dict = {"semantic_organize": False}
 
 
-@router.get("/{file_id}")
-async def get_file(file_id: int):
-    """Get a single file by ID."""
-    file_rec = await db.get_file_by_id(file_id)
-    if not file_rec:
-        raise HTTPException(status_code=404, detail="File not found")
-    return file_rec
-
-
 @router.get("/stats/summary")
 async def file_stats():
     """Get file statistics."""
@@ -163,6 +154,15 @@ async def file_stats():
 async def get_scan_flags():
     """Get the organize flags from the latest scan."""
     return _scan_flags
+
+
+@router.get("/{file_id}")
+async def get_file(file_id: int):
+    """Get a single file by ID."""
+    file_rec = await db.get_file_by_id(file_id)
+    if not file_rec:
+        raise HTTPException(status_code=404, detail="File not found")
+    return file_rec
 
 
 @router.get("/{file_id}/similar")

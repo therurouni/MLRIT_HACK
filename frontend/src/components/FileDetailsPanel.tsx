@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { getFileById, getSimilarFiles, openFile } from "../api";
+import { getFileById, getSimilarFiles, openFile, getClusters, moveNode } from "../api";
 import type { FileRecord } from "../types";
 
 interface SimilarFile {
@@ -26,6 +26,7 @@ interface FileDetailsPanelProps {
 	onClose: () => void;
 	onFileSelect?: (fileId: number, clusterId: number) => void;
 	onGapAnalysis?: () => void;
+	onNodeMoved?: () => void;
 }
 
 const EXT_ICONS: Record<string, { label: string; bg: string }> = {
@@ -62,10 +63,15 @@ export default function FileDetailsPanel({
 	onClose,
 	onFileSelect,
 	onGapAnalysis,
+	onNodeMoved,
 }: FileDetailsPanelProps) {
 	const [file, setFile] = useState<FileRecord | null>(null);
 	const [similar, setSimilar] = useState<SimilarFile[]>([]);
 	const [loading, setLoading] = useState(false);
+	const [allClusters, setAllClusters] = useState<{ id: number; label: number; name: string }[]>([]);
+	const [moveDropdownOpen, setMoveDropdownOpen] = useState(false);
+	const [moving, setMoving] = useState(false);
+	const [moveMessage, setMoveMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
 	const handleOpenFile = async (fileId: number) => {
 		try {
@@ -96,6 +102,58 @@ export default function FileDetailsPanel({
 			})
 			.finally(() => setLoading(false));
 	}, [fileId]);
+
+	// Load all clusters for the move dropdown
+	useEffect(() => {
+		getClusters()
+			.then((res) =>
+				setAllClusters(
+					(res.clusters || []).map((c: any) => ({
+						id: c.id,
+						label: c.label,
+						name: c.name,
+					})),
+				),
+			)
+			.catch(() => setAllClusters([]));
+	}, [fileId]);
+
+	const handleMoveToCluster = async (targetLabel: number) => {
+		if (!file) return;
+		setMoving(true);
+		setMoveMessage(null);
+		try {
+			const result = await moveNode(file.id, targetLabel);
+			setMoveMessage({
+				text: `Moved to "${result.to_cluster_name}"${result.source_cluster_removed ? " (old cluster removed)" : ""}`,
+				type: "success",
+			});
+			setMoveDropdownOpen(false);
+			// Refresh file data
+			const updatedFile = await getFileById(file.id);
+			setFile(updatedFile);
+			// Refresh clusters list
+			const res = await getClusters();
+			setAllClusters(
+				(res.clusters || []).map((c: any) => ({
+					id: c.id,
+					label: c.label,
+					name: c.name,
+				})),
+			);
+			// Notify parent to refresh graph
+			if (onNodeMoved) onNodeMoved();
+			// Clear message after 3 seconds
+			setTimeout(() => setMoveMessage(null), 3000);
+		} catch (err: any) {
+			setMoveMessage({
+				text: err.message || "Failed to move file",
+				type: "error",
+			});
+		} finally {
+			setMoving(false);
+		}
+	};
 
 	// Nothing selected at all
 	if (fileId === null && clusterSelection === null) return null;
@@ -340,6 +398,69 @@ export default function FileDetailsPanel({
 						}}>
 						📋 Copy Path
 					</button>
+
+					{/* Move to Cluster */}
+					<div className="relative">
+						<button
+							className="w-full py-2 text-sm font-medium rounded-lg transition-colors bg-claude-bg hover:bg-claude-border text-claude-text flex items-center justify-center gap-2"
+							onClick={() => setMoveDropdownOpen(!moveDropdownOpen)}
+							disabled={moving}>
+							{moving ? (
+								<span className="animate-pulse">Moving...</span>
+							) : (
+								<>
+									<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+										<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+									</svg>
+									Move to Cluster
+								</>
+							)}
+						</button>
+
+						{moveDropdownOpen && (
+							<div className="absolute bottom-full left-0 right-0 mb-1 bg-claude-surface border border-claude-border rounded-lg shadow-xl z-50 max-h-48 overflow-auto">
+								<div className="py-1">
+									{allClusters
+										.filter((c) => c.label !== file.cluster_id)
+										.map((c) => (
+											<button
+												key={c.label}
+												onClick={() => handleMoveToCluster(c.label)}
+												className="w-full text-left px-3 py-2 text-xs text-claude-text hover:bg-claude-bg/70 transition-colors flex items-center gap-2">
+												<span
+													className="w-2.5 h-2.5 rounded-full shrink-0"
+													style={{
+														backgroundColor:
+															["#D97757","#3b82f6","#22c55e","#a855f7","#ec4899","#eab308","#06b6d4","#ef4444","#6366f1","#14b8a6","#f43f5e","#84cc16","#8b5cf6","#0ea5e9","#d946ef"][c.label % 15],
+													}}
+												/>
+												<span className="truncate">{c.name}</span>
+												<span className="text-claude-muted ml-auto shrink-0 text-[10px]">
+													#{c.label}
+												</span>
+											</button>
+										))}
+									{allClusters.filter((c) => c.label !== file.cluster_id).length === 0 && (
+										<div className="px-3 py-2 text-xs text-claude-muted">
+											No other clusters available
+										</div>
+									)}
+								</div>
+							</div>
+						)}
+					</div>
+
+					{/* Move feedback message */}
+					{moveMessage && (
+						<div
+							className={`text-xs px-3 py-2 rounded-lg ${
+								moveMessage.type === "success"
+									? "bg-green-500/15 text-green-400 border border-green-500/30"
+									: "bg-red-500/15 text-red-400 border border-red-500/30"
+							}`}>
+							{moveMessage.text}
+						</div>
+					)}
 				</div>
 			)}
 		</div>
